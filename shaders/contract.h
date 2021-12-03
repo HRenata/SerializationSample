@@ -47,5 +47,10 @@ namespace Serialize
             }
 		};
 	};
+
+	struct Key
+	{
+		int key;
+	};
 #pragma pack (pop)
 }

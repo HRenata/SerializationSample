@@ -31,8 +31,8 @@ void On_action_view_contracts(const ContractID& cid)
 void On_action_serialize(const ContractID& cid)
 {
     Serialize::Test::Att obj;
-    obj.type = 90;
-    obj.name = "Name";
+    obj.type = 324590;
+    obj.name = "NameNameNAN";
 
     yas::count_ostream cs;
     yas::binary_oarchive<yas::count_ostream, Serialize::YAS_FLAGS> sizeCalc(cs);
@@ -53,11 +53,27 @@ void On_action_serialize(const ContractID& cid)
 
 void On_action_deserialize(const ContractID& cid)
 {
-    Serialize::Test::Att test;
-    if (!Env::VarReader::Read_T("0", test))
-         return On_error("Failed to read contract's current params");
+    Env::Key_T<Serialize::Key> key;
+    _POD_(key.m_Prefix.m_Cid) = cid;
+    _POD_(key.m_KeyInContract.key) = 0;
 
-    Env::DocAddNum32("type", test.type);
+    uint32_t valueLen = 0, keyLen = sizeof(Serialize::Key);
+
+    Env::VarReader reader(key, key);
+    reader.MoveNext(&key, keyLen, nullptr, valueLen, 0);
+
+    std::vector<char> v(valueLen, '\0');
+    auto buf = reinterpret_cast<Serialize::Buffer*>(v.data());
+    reader.MoveNext(&key, keyLen, buf, valueLen, 1);
+
+    yas::mem_istream ms(v.data() + sizeof(Serialize::Buffer), v.size() - sizeof(Serialize::Buffer));
+    yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
+
+    Serialize::Test::Att obj; 
+    iar& obj;
+
+    Env::DocAddNum32("type", obj.type);
+    Env::DocAddText("name", obj.name.c_str());
 }
 
 BEAM_EXPORT void Method_0()
