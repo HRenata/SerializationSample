@@ -1,8 +1,9 @@
 #include "Shaders/common.h"
 #include "Shaders/app_common_impl.h"
 #include "contract.h"
-
 #include "contract_sid.i"
+
+#include <algorithm>
 
 void On_error(const char* msg)
 {
@@ -28,10 +29,79 @@ void On_action_view_contracts(const ContractID& cid)
     EnumAndDumpContracts(s_SID);
 }
 
+// PLAYER
+void On_action_add_collection(const ContractID& cid) 
+{
+    Env::GenerateKernel(nullptr, 5, nullptr, 0, nullptr, 0, nullptr, 0, "Create Serialize contract", 0);
+
+    char collectionName[0x20];
+    uint32_t nNameSize = 0;
+    nNameSize = Env::DocGetText("collection_name", collectionName, sizeof(collectionName));
+    if (nNameSize < 2)
+    {
+        return On_error("collection_name should be non-empty");
+    }
+
+    //Env::Key_T<const char*> key;
+    //_POD_(key.m_Prefix.m_Cid) = cid;
+    //key.m_KeyInContract = "collections";
+
+    //uint32_t valueLen = 0, keyLen = sizeof(Serialize::Key);
+
+    //// deserialize
+    //Env::VarReader reader(key, key);
+    //reader.MoveNext(&key, keyLen, nullptr, valueLen, 0);
+
+    //std::vector<char> iv(valueLen, '\0');
+    //auto buf = reinterpret_cast<Serialize::Buffer*>(iv.data());
+    //reader.MoveNext(&key, keyLen, buf, valueLen, 1);
+
+    //yas::mem_istream ms(iv.data() + sizeof(Serialize::Buffer), iv.size() - sizeof(Serialize::Buffer));
+    //yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
+
+    //Serialize::Collections collections;
+    //iar& collections;
+
+    //Env::DocAddNum32("size", collections.size());
+    //
+
+    //std::string collectionNameStr(collectionName, nNameSize);
+    //Serialize::Collection collection;
+    //collection.name = collectionNameStr;
+
+    //if (std::find(collections.begin(), collections.end(), collection) == collections.end())
+    //{
+    //    return On_error("collection_name should be non-empty");
+    //}
+    //
+    //collections.push_back(collection);
+
+
+    //// serialize
+    //{
+    //    yas::count_ostream cs;
+    //    yas::binary_oarchive<yas::count_ostream, Serialize::YAS_FLAGS> sizeCalc(cs);
+    //    sizeCalc& collections;
+
+    //    auto paramSize = sizeof(Serialize::Buffer) + cs.total_size;
+    //    std::vector<char> ov(paramSize, '\0');
+    //    Serialize::Buffer* buf = reinterpret_cast<Serialize::Buffer*>(ov.data());
+    //    buf->size = cs.total_size;
+
+    //    yas::mem_ostream ms(reinterpret_cast<char*>(buf + 1), buf->size);
+    //    yas::binary_oarchive<yas::mem_ostream, Serialize::YAS_FLAGS> ar(ms);
+    //    ar& collections;
+
+    //    Env::GenerateKernel(&cid, Serialize::Actions::AddCollection::s_iMethod, buf, paramSize, nullptr, 0, nullptr, 0,
+    //        "Added new collection", 0);
+    //}
+}
+
 void On_action_serialize(const ContractID& cid)
 {
     Serialize::Test::Att obj;
     obj.type = 324590;
+    obj.name = "NameNameNAN";
     obj.name = "NameNameNAN";
 
     yas::count_ostream cs;
@@ -46,7 +116,6 @@ void On_action_serialize(const ContractID& cid)
     yas::mem_ostream ms(reinterpret_cast<char*>(buf + 1), buf->size);
     yas::binary_oarchive<yas::mem_ostream, Serialize::YAS_FLAGS> ar(ms);
     ar& obj;
-    Env::DocAddNum32("first", paramSize);
 
     Env::GenerateKernel(&cid, Serialize::Test::s_iMethod, buf, paramSize, nullptr, 0, nullptr, 0, "Serialized data sent to contract", 0);
 }
@@ -107,6 +176,11 @@ BEAM_EXPORT void Method_0()
                 {
                     Env::DocGroup grMethod("deserialize");
                     Env::DocAddText("cid", "ContractID");
+                } 
+                {
+                    Env::DocGroup grMethod("add");
+                    Env::DocAddText("cid", "ContractID");
+                    Env::DocAddText("name", "string");
                 }           
             }
         }
@@ -133,7 +207,8 @@ BEAM_EXPORT void Method_1()
     const std::vector<std::pair<const char*, Action_func_t>> VALID_PLAYER_ACTIONS = 
     {
         {"serialize", On_action_serialize},
-        {"deserialize", On_action_deserialize}
+        {"deserialize", On_action_deserialize},
+        {"add", On_action_add_collection}
     };
 
     const std::vector<std::pair<const char*, Action_func_t>> VALID_MANAGER_ACTIONS = 
