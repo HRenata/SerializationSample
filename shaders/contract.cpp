@@ -25,12 +25,30 @@ BEAM_EXPORT void Ctor(void*)
 BEAM_EXPORT void Dtor(void*) {}
 
 //serialization
-BEAM_EXPORT void Method_2(Serialize::Buffer& paramsBuffer)
+BEAM_EXPORT void Method_2(void*)
 {
+	Serialize::Test::Att obj;
+	obj.type = 324590;
+	obj.name = "NameNameNAN";
+	obj.name = "NameNameNAN";
+
+	yas::count_ostream cs;
+	yas::binary_oarchive<yas::count_ostream, Serialize::YAS_FLAGS> sizeCalc(cs);
+	sizeCalc& obj;
+
+	auto paramSize = sizeof(Serialize::Buffer) + cs.total_size;
+	std::vector<char> v(paramSize, '\0');
+	Serialize::Buffer* buf = reinterpret_cast<Serialize::Buffer*>(v.data());
+	buf->size = cs.total_size;
+
+	yas::mem_ostream ms(reinterpret_cast<char*>(buf + 1), buf->size);
+	yas::binary_oarchive<yas::mem_ostream, Serialize::YAS_FLAGS> ar(ms);
+	ar& obj;
+
 	Serialize::Key key;
 	key.key = 0;
 
-	Env::SaveVar(&key, sizeof(key), &paramsBuffer, sizeof(Serialize::Buffer) + paramsBuffer.size, KeyTag::Internal);
+	Env::SaveVar(&key, sizeof(key), buf, paramSize, KeyTag::Internal);
 }
 
 //deserialization
@@ -60,6 +78,7 @@ BEAM_EXPORT void Method_4(Serialize::Buffer& paramsBuffer)
 {
 	Env::SaveVar("collections", sizeof("collections"), &paramsBuffer, sizeof(Serialize::Buffer) + paramsBuffer.size, KeyTag::Internal);
 }
+
 #include <deque>
 BEAM_EXPORT void Method_5(void*)
 {

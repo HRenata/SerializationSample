@@ -13,7 +13,7 @@ void On_error(const char* msg)
     }
 }
 
-// MANAGER
+// MANAGER  
 void On_action_create_contract(const ContractID& cid)
 {
     Env::GenerateKernel(nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, "Create Serialize contract", 0);
@@ -99,25 +99,7 @@ void On_action_add_collection(const ContractID& cid)
 
 void On_action_serialize(const ContractID& cid)
 {
-    Serialize::Test::Att obj;
-    obj.type = 324590;
-    obj.name = "NameNameNAN";
-    obj.name = "NameNameNAN";
-
-    yas::count_ostream cs;
-    yas::binary_oarchive<yas::count_ostream, Serialize::YAS_FLAGS> sizeCalc(cs);
-    sizeCalc& obj;
-
-    auto paramSize = sizeof(Serialize::Buffer) + cs.total_size;
-    std::vector<char> v(paramSize, '\0');
-    Serialize::Buffer* buf = reinterpret_cast<Serialize::Buffer*>(v.data());
-    buf->size = cs.total_size;
-
-    yas::mem_ostream ms(reinterpret_cast<char*>(buf + 1), buf->size);
-    yas::binary_oarchive<yas::mem_ostream, Serialize::YAS_FLAGS> ar(ms);
-    ar& obj;
-
-    Env::GenerateKernel(&cid, Serialize::Test::s_iMethod, buf, paramSize, nullptr, 0, nullptr, 0, "Serialized data sent to contract", 0);
+    Env::GenerateKernel(&cid, Serialize::Test::s_iMethod, nullptr, 0, nullptr, 0, nullptr, 0, "Serialized data sent to contract", 0);
 }
 
 void On_action_deserialize(const ContractID& cid)
@@ -129,11 +111,17 @@ void On_action_deserialize(const ContractID& cid)
     uint32_t valueLen = 0, keyLen = sizeof(Serialize::Key);
 
     Env::VarReader reader(key, key);
-    reader.MoveNext(&key, keyLen, nullptr, valueLen, 0);
+    if (!reader.MoveNext(&key, keyLen, nullptr, valueLen, 0))
+    {
+        return On_error("Tralalala");
+    }
 
     std::vector<char> v(valueLen, '\0');
     auto buf = reinterpret_cast<Serialize::Buffer*>(v.data());
-    reader.MoveNext(&key, keyLen, buf, valueLen, 1);
+    if(!reader.MoveNext(&key, keyLen, buf, valueLen, 1))
+    {
+        return On_error("Tralalala2");
+    }
 
     yas::mem_istream ms(v.data() + sizeof(Serialize::Buffer), v.size() - sizeof(Serialize::Buffer));
     yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
