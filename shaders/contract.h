@@ -26,7 +26,6 @@ namespace Serialize
 		size_t size;
 		char data[0];
 	};
-
 	struct Collection
 	{
 		std::string name;
@@ -44,44 +43,73 @@ namespace Serialize
 	};
 	using Collections = std::vector<Serialize::Collection>;
 
-	struct Test
+	struct Attribute
 	{
-		static const uint32_t s_iMethod = 2;
-		struct Att
+		std::string name;
+
+		bool operator==(const Attribute& other) const
 		{
-            int type;
-            std::string name;
-            bool operator==(const Att& other) const
-            {
-				return type == other.type && name == other.name;
-            }
-            template<typename Ar>
-            void serialize(Ar& ar)
-            {
-                ar& type& name;
-            }
-		};
+			return name == other.name;
+		}
+
+		template<typename Ar>
+		void serialize(Ar& ar)
+		{
+			ar& name;
+		}
 	};
+	struct Attributes
+	{
+		std::string collectionName;
+		std::vector<Serialize::Attribute> attributes; 
+
+		bool operator==(const Attributes& other) const
+		{
+			return collectionName == other.collectionName && attributes == other.attributes;
+		}
+
+		template<typename Ar>
+		void serialize(Ar& ar)
+		{
+			ar& collectionName& attributes;
+		}
+	};
+
+
+	using Hash256 = Opaque<32>;
+	Hash256 get_name_hash(const char* name, size_t len)
+	{
+		Hash256 res;
+		HashProcessor::Sha256 hp;
+		hp.Write(name, len);
+		hp >> res;
+		return res;
+	}
 
 	struct Key
 	{
-		int key;
+		Hash256 name_hash;
+		Key(const Hash256& key)
+		{
+			Env::Memcpy(&name_hash, &key, sizeof(name_hash));
+		}
 	};
 
+	struct Key1
+	{
+		int key;
+	};
 	/////////////////////////////////////////////////////////////////////////////////////////
 
 	namespace Actions
 	{
 		struct AddCollection
 		{
-			static const uint32_t s_iMethod = 4;
-			std::string name;
-
-			template<typename Ar>
-			void serialize(Ar& ar)
-			{
-				ar& name;
-			}
+			static const uint32_t s_iMethod = 2;
+		};
+		struct AddAttribute
+		{
+			static const uint32_t s_iMethod = 3;
 		};
 	}
 #pragma pack (pop)

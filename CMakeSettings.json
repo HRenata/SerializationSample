@@ -1,7 +1,7 @@
 ﻿{
   "environments": [
-	{ "WASI_SDK_PREFIX": "C:/Users/Renata_Hauryliuk/Documents/projects/1/shader-sdk/wasi-sdk" },
-    { "BEAM_SHADER_SDK": "C:/Users/Renata_Hauryliuk/Documents/projects/1/shader-sdk" }
+    { "WASI_SDK_PREFIX": "C:/Users/Renata_Hauryliuk/Downloads/dist/wasi-sdk-12.11g7256a691257d" },
+    { "BEAM_SHADER_SDK": "C:/Users/Renata_Hauryliuk/Documents/projects/shader-sdk" }
   ],
 
   "configurations": [

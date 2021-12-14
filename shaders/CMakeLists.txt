@@ -12,3 +12,4 @@ target_link_libraries(contract PRIVATE Beam::shader-lib)
 target_link_libraries(app PRIVATE Beam::shader-lib)
 
 generate_sid(contract)
+add_dependencies(app contract_header)
