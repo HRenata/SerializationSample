@@ -1,31 +1,13 @@
 #pragma once
 
-#ifndef HOST_BUILD
-
-#include <cstddef>
-
+#include "serialization.h"
 #include <string>
 #include <vector>
 
-#define _LITTLE_ENDIAN
-#include "exception_base.hpp" // hack
-#define __YAS_THROW_EXCEPTION(type, msg) Env::Halt();
-#include <yas/serialize.hpp>
-#include <yas/std_types.hpp>
-
-#endif
-
-namespace Serialize
+namespace Dogs
 {
-	constexpr size_t YAS_FLAGS = yas::binary | yas::no_header | yas::elittle | yas::compacted;
-
 #pragma pack (push, 1)
 
-	struct Buffer
-	{
-		size_t size;
-		char data[0];
-	};
 	struct Collection
 	{
 		std::string name;
@@ -41,7 +23,7 @@ namespace Serialize
 			ar& name;
 		}
 	};
-	using Collections = std::vector<Serialize::Collection>;
+	using Collections = std::vector<Dogs::Collection>;
 
 	struct Attribute
 	{
@@ -61,7 +43,7 @@ namespace Serialize
 	struct Attributes
 	{
 		std::string collectionName;
-		std::vector<Serialize::Attribute> attributes; 
+		std::vector<Dogs::Attribute> attributes; 
 
 		bool operator==(const Attributes& other) const
 		{

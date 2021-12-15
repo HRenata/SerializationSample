@@ -41,35 +41,33 @@ void On_action_add_collection(const ContractID& cid)
     }
 
     std::string collectionNameStr(collectionName, nNameSize);
-    Serialize::Collection collection;
+    Dogs::Collection collection;
     collection.name = collectionNameStr;
 
     // creating key
-    Env::Key_T<Serialize::Key1> key;
+    Env::Key_T<Dogs::Key1> key;
     _POD_(key.m_Prefix.m_Cid) = cid;
     _POD_(key.m_KeyInContract.key) = 0;
 
     uint32_t valueLen = 0, keyLen = sizeof(const char*);
 
     // loading serialized buf of collections
-    Env::VarReader reader(key, key);
-    Serialize::Collections collections;
+    Dogs::Collections collections;
 
+    Env::VarReader reader(key, key);
     if (reader.MoveNext(&key, keyLen, nullptr, valueLen, 0))
     {
         std::vector<char> iv(valueLen, '\0');
-        auto buf = reinterpret_cast<Serialize::Buffer*>(iv.data());
+        auto buf = reinterpret_cast<Serialization::Buffer*>(iv.data());
         if (!reader.MoveNext(&key, keyLen, buf, valueLen, 1))
         {
             return On_error("error of move next");
         }
 
         // deserialization of collections
-        yas::mem_istream ms(iv.data() + sizeof(Serialize::Buffer), iv.size() - sizeof(Serialize::Buffer));
-        yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
-
-        iar& collections;
-
+        collections = Serialization::deserialize<Dogs::Collections>(iv.data() + sizeof(Serialization::Buffer),
+            iv.size() - sizeof(Serialization::Buffer));
+        
         if (std::find(collections.begin(), collections.end(), collection) != collections.end())
         {
             return On_error("collection_name exists");
@@ -81,21 +79,11 @@ void On_action_add_collection(const ContractID& cid)
 
     // serialization of collections
     {
-        yas::count_ostream cs;
-        yas::binary_oarchive<yas::count_ostream, Serialize::YAS_FLAGS> sizeCalc(cs);
-        sizeCalc& collections;
-
-        auto paramSize = sizeof(Serialize::Buffer) + cs.total_size;
-        std::vector<char> ov(paramSize, '\0');
-        Serialize::Buffer* buf = reinterpret_cast<Serialize::Buffer*>(ov.data());
-        buf->size = cs.total_size;
-
-        yas::mem_ostream ms(reinterpret_cast<char*>(buf + 1), buf->size);
-        yas::binary_oarchive<yas::mem_ostream, Serialize::YAS_FLAGS> ar(ms);
-        ar& collections;
+        auto serializedBuffer = Serialization::serialize(collections);
 
         // transaction for saving new collections
-        Env::GenerateKernel(&cid, Serialize::Actions::AddCollection::s_iMethod, buf, paramSize, nullptr, 0, nullptr, 0,
+        Env::GenerateKernel(&cid, Dogs::Actions::AddCollection::s_iMethod, serializedBuffer, 
+            sizeof(Serialization::Buffer) + serializedBuffer->size, nullptr, 0, nullptr, 0,
             "Added new collection", 0);
     }
 }
@@ -103,7 +91,7 @@ void On_action_add_collection(const ContractID& cid)
 void On_action_view_collections(const ContractID& cid)
 {
     // creating key
-    Env::Key_T<Serialize::Key1> key;
+    Env::Key_T<Dogs::Key1> key;
     _POD_(key.m_Prefix.m_Cid) = cid;
     _POD_(key.m_KeyInContract.key) = 0;
 
@@ -117,19 +105,15 @@ void On_action_view_collections(const ContractID& cid)
     }
 
     std::vector<char> v(valueLen, '\0');
-    auto buf = reinterpret_cast<Serialize::Buffer*>(v.data());
+    auto buf = reinterpret_cast<Serialization::Buffer*>(v.data());
     if (!reader.MoveNext(&key, keyLen, buf, valueLen, 1))
     {
         return On_error("error of move next");
     }
 
     // deserialization of collections
-    yas::mem_istream ms(v.data() + sizeof(Serialize::Buffer), v.size() - sizeof(Serialize::Buffer));
-    yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
-
-    Serialize::Collections collections;
-
-    iar& collections;
+    Dogs::Collections collections = Serialization::deserialize<Dogs::Collections>(v.data() + sizeof(Serialization::Buffer),
+        v.size() - sizeof(Serialization::Buffer));
 
     // printing all collecitons' name
     Env::DocAddGroup("collections");
@@ -142,33 +126,29 @@ void On_action_view_collections(const ContractID& cid)
 void On_action_add_attribute_to_collection(const ContractID& cid)
 {
     // creating key for collections
-    Env::Key_T<Serialize::Key1> key;
+    Env::Key_T<Dogs::Key1> key;
     _POD_(key.m_Prefix.m_Cid) = cid;
     _POD_(key.m_KeyInContract.key) = 0;
 
     // loading serialized buf of collections
-    uint32_t valueLen = 0, keyLen = sizeof(Serialize::Key);
+    uint32_t valueLen = 0, keyLen = sizeof(Dogs::Key);
 
     Env::VarReader reader(key, key);
-    Serialize::Collections collections;
-
     if (!reader.MoveNext(&key, keyLen, nullptr, valueLen, 0))
     {
         return On_error("error of move next");
     }
 
     std::vector<char> iv(valueLen, '\0');
-    auto buf = reinterpret_cast<Serialize::Buffer*>(iv.data());
+    auto buf = reinterpret_cast<Serialization::Buffer*>(iv.data());
     if (!reader.MoveNext(&key, keyLen, buf, valueLen, 1))
     {
         return On_error("error of move next");
     }
 
     // deserialization collections
-    yas::mem_istream ms(iv.data() + sizeof(Serialize::Buffer), iv.size() - sizeof(Serialize::Buffer));
-    yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
-
-    iar& collections;
+    Dogs::Collections collections = Serialization::deserialize<Dogs::Collections>(iv.data() + sizeof(Serialization::Buffer),
+        iv.size() - sizeof(Serialization::Buffer));
 
     // loading name of collection, that will get new attribute, from function parameters
     char collectionName[0x20];
@@ -180,7 +160,7 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
     }
 
     std::string collectionNameStr(collectionName, nNameSize);
-    Serialize::Collection collection;
+    Dogs::Collection collection;
     collection.name = collectionNameStr;
 
     // checking if such collection already exists
@@ -190,9 +170,9 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
     }
 
     // creating key for attributes
-    Serialize::Hash256 name_hash = Serialize::get_name_hash(collectionNameStr.c_str(), collectionNameStr.size());
-    Serialize::Key key_(name_hash);
-    Env::Key_T<Serialize::Key> keyAtt = { .m_KeyInContract = key_ };
+    Dogs::Hash256 name_hash = Dogs::get_name_hash(collectionNameStr.c_str(), collectionNameStr.size());
+    Dogs::Key key_(name_hash);
+    Env::Key_T<Dogs::Key> keyAtt = { .m_KeyInContract = key_ };
     keyAtt.m_Prefix.m_Cid = cid;
 
 
@@ -206,31 +186,29 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
     }
 
     std::string attributeNameStr(attributeName, nNameSize);
-    Serialize::Attribute attribute;
+    Dogs::Attribute attribute;
     attribute.name = attributeNameStr;
     
     // loading vector of attributes for collection
-    Env::VarReader readerAtt(keyAtt, keyAtt);
-    Serialize::Attributes attributes;
+    Dogs::Attributes attributes;
 
     valueLen = 0;
-    keyLen = sizeof(Serialize::Key);
+    keyLen = sizeof(Dogs::Key);
 
+    Env::VarReader readerAtt(keyAtt, keyAtt);
     // если по ключу не достается ничего, то в пустой созданный attributes
     if (readerAtt.MoveNext(&keyAtt, keyLen, nullptr, valueLen, 0))
     {
         std::vector<char> iv(valueLen, '\0');
-        auto buf = reinterpret_cast<Serialize::Buffer*>(iv.data());
+        auto buf = reinterpret_cast<Serialization::Buffer*>(iv.data());
         if (!readerAtt.MoveNext(&keyAtt, keyLen, buf, valueLen, 1))
         {
             return On_error("error of move next");
         }
 
         // deserialization attributes of collection
-        yas::mem_istream ms(iv.data() + sizeof(Serialize::Buffer), iv.size() - sizeof(Serialize::Buffer));
-        yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
-
-        iar& attributes;
+        attributes = Serialization::deserialize<Dogs::Attributes>(iv.data() + sizeof(Serialization::Buffer),
+            iv.size() - sizeof(Serialization::Buffer));
 
         // checking if such attribute already exists
         if (std::find(attributes.attributes.begin(), attributes.attributes.end(), attribute) != attributes.attributes.end())
@@ -243,21 +221,11 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
 
     // serialization of attributes
     {
-        yas::count_ostream cs;
-        yas::binary_oarchive<yas::count_ostream, Serialize::YAS_FLAGS> sizeCalc(cs);
-        sizeCalc& attributes;
-
-        auto paramSize = sizeof(Serialize::Buffer) + cs.total_size;
-        std::vector<char> ov(paramSize, '\0');
-        Serialize::Buffer* buf = reinterpret_cast<Serialize::Buffer*>(ov.data());
-        buf->size = cs.total_size;
-
-        yas::mem_ostream ms(reinterpret_cast<char*>(buf + 1), buf->size);
-        yas::binary_oarchive<yas::mem_ostream, Serialize::YAS_FLAGS> ar(ms);
-        ar& attributes;
+        auto serializedBuffer = Serialization::serialize(attributes);
 
         // transaction for saving new attributes
-        Env::GenerateKernel(&cid, Serialize::Actions::AddAttribute::s_iMethod, buf, paramSize, nullptr, 0, nullptr, 0,
+        Env::GenerateKernel(&cid, Dogs::Actions::AddAttribute::s_iMethod, serializedBuffer,
+            sizeof(Serialization::Buffer) + serializedBuffer->size, nullptr, 0, nullptr, 0,
             "Added new attribute", 0);
     }
 }
@@ -275,34 +243,30 @@ void On_action_view_attributes_by_collection(const ContractID& cid)
 
     // creating key for loading attributes
     std::string collectionNameStr(collectionName, nNameSize);
-    Serialize::Hash256 name_hash = Serialize::get_name_hash(collectionNameStr.c_str(), collectionNameStr.size());
-    Serialize::Key key_(name_hash);
-    Env::Key_T<Serialize::Key> keyAtt = { .m_KeyInContract = key_ };
+    Dogs::Hash256 name_hash = Dogs::get_name_hash(collectionNameStr.c_str(), collectionNameStr.size());
+    Dogs::Key key_(name_hash);
+    Env::Key_T<Dogs::Key> keyAtt = { .m_KeyInContract = key_ };
     keyAtt.m_Prefix.m_Cid = cid;
 
     // loading vector of attributes for collection
+    uint32_t valueLen = 0, keyLen = sizeof(Dogs::Key);
+
     Env::VarReader readerAtt(keyAtt, keyAtt);
-    Serialize::Attributes attributes;
-
-    uint32_t valueLen = 0, keyLen = sizeof(Serialize::Key);
-
     if (!readerAtt.MoveNext(&keyAtt, keyLen, nullptr, valueLen, 0))
     {
         return On_error("error of move next");
     }
 
     std::vector<char> iv(valueLen, '\0');
-    auto buf = reinterpret_cast<Serialize::Buffer*>(iv.data());
+    auto buf = reinterpret_cast<Serialization::Buffer*>(iv.data());
     if (!readerAtt.MoveNext(&keyAtt, keyLen, buf, valueLen, 1))
     {
         return On_error("error of move next");
     }
 
     // deserialization attributes
-    yas::mem_istream ms(iv.data() + sizeof(Serialize::Buffer), iv.size() - sizeof(Serialize::Buffer));
-    yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
-
-    iar& attributes;
+    Dogs::Attributes attributes = Serialization::deserialize< Dogs::Attributes>(iv.data() + sizeof(Serialization::Buffer),
+        iv.size() - sizeof(Serialization::Buffer));
 
     // printing all attributes for collection 
     Env::DocAddGroup("attributes");
