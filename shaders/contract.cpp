@@ -4,8 +4,10 @@
 
 BEAM_EXPORT void Ctor(void*) 
 {
+	// creating empty collections
 	Serialize::Collections collections;
 
+	// serialization of collections
 	yas::count_ostream cs;
 	yas::binary_oarchive<yas::count_ostream, Serialize::YAS_FLAGS> sizeCalc(cs);
 	sizeCalc& collections;
@@ -19,8 +21,11 @@ BEAM_EXPORT void Ctor(void*)
 	yas::binary_oarchive<yas::mem_ostream, Serialize::YAS_FLAGS> ar(ms);
 	ar& collections;
 
+	// creating key
 	Serialize::Key1 key;
 	key.key = 0;
+
+	// saving serialized buffer
 	Env::SaveVar(&key, sizeof(key), buf, paramSize, KeyTag::Internal);
 }
 
@@ -28,13 +33,14 @@ BEAM_EXPORT void Dtor(void*) {}
 
 BEAM_EXPORT void Method_2(Serialize::Buffer& paramsBuffer)
 {
+	// creating key for saving collections
 	Serialize::Key1 key;
 	key.key = 0;
 	
-	// save collections
+	// saving collections
 	Env::SaveVar(&key, sizeof(key), &paramsBuffer, sizeof(Serialize::Buffer) + paramsBuffer.size, KeyTag::Internal);
 
-	// deserialize collections
+	// deserialization of collections
 	Serialize::Collections collections;
 
 	yas::mem_istream ms(paramsBuffer.data, paramsBuffer.size);
@@ -42,10 +48,11 @@ BEAM_EXPORT void Method_2(Serialize::Buffer& paramsBuffer)
 
 	iar& collections;
 
-	// serialize empty vector of attributes for last collection
+	// creating of attributes with empty vector for last collection
 	Serialize::Attributes attributes;
 	attributes.collectionName = collections[collections.size() - 1].name;
 
+	// serialization of attributes for last collection
 	yas::count_ostream cs;
 	yas::binary_oarchive<yas::count_ostream, Serialize::YAS_FLAGS> sizeCalc(cs);
 	sizeCalc& attributes;
@@ -59,18 +66,17 @@ BEAM_EXPORT void Method_2(Serialize::Buffer& paramsBuffer)
 	yas::binary_oarchive<yas::mem_ostream, Serialize::YAS_FLAGS> ar(mos);
 	ar& attributes;
 
-	// save empty vector of attributes for last collection
+	//creating key for saving attributes
 	Serialize::Hash256 name_hash = Serialize::get_name_hash(attributes.collectionName.c_str(), attributes.collectionName.size());
 	Serialize::Key key_(name_hash);
-	Env::SaveVar(&key_, sizeof(key_), buf, paramSize, KeyTag::Internal);
 
-	//auto keyAtt = attributes.collectionName.c_str();
-	//Env::SaveVar(&keyAtt, sizeof(keyAtt), buf, paramSize, KeyTag::Internal);
+	// saving attributes
+	Env::SaveVar(&key_, sizeof(key_), buf, paramSize, KeyTag::Internal);
 }
 
 BEAM_EXPORT void Method_3(Serialize::Buffer& paramsBuffer)
 {
-	// deserialize attribute
+	// deserialization of attributes
 	Serialize::Attributes attributes;
 
 	yas::mem_istream ms(paramsBuffer.data, paramsBuffer.size);
@@ -78,11 +84,10 @@ BEAM_EXPORT void Method_3(Serialize::Buffer& paramsBuffer)
 
 	iar& attributes;
 
-	// save empty vector of attributes for last collection
+	//creating key
 	Serialize::Hash256 name_hash = Serialize::get_name_hash(attributes.collectionName.c_str(), attributes.collectionName.size());
 	Serialize::Key key_(name_hash);
+	
+	// saving attributes
 	Env::SaveVar(&key_, sizeof(key_), &paramsBuffer, sizeof(Serialize::Buffer) + paramsBuffer.size, KeyTag::Internal);
-
-	//auto keyAtt = attributes.collectionName.c_str();
-	//Env::SaveVar(&keyAtt, sizeof(keyAtt), &paramsBuffer, sizeof(Serialize::Buffer) + paramsBuffer.size, KeyTag::Internal);
 }

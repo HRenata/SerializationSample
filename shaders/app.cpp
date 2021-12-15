@@ -1,4 +1,4 @@
-#include "Shaders/common.h"
+﻿#include "Shaders/common.h"
 #include "Shaders/app_common_impl.h"
 #include "contract.h"
 #include "contract_sid.i"
@@ -40,19 +40,20 @@ void On_action_add_collection(const ContractID& cid)
         return On_error("collection_name should be non-empty");
     }
 
+    std::string collectionNameStr(collectionName, nNameSize);
+    Serialize::Collection collection;
+    collection.name = collectionNameStr;
+
+    // creating key
     Env::Key_T<Serialize::Key1> key;
     _POD_(key.m_Prefix.m_Cid) = cid;
     _POD_(key.m_KeyInContract.key) = 0;
 
     uint32_t valueLen = 0, keyLen = sizeof(const char*);
 
-    // deserialize
+    // loading serialized buf of collections
     Env::VarReader reader(key, key);
     Serialize::Collections collections;
-
-    std::string collectionNameStr(collectionName, nNameSize);
-    Serialize::Collection collection;
-    collection.name = collectionNameStr;
 
     if (reader.MoveNext(&key, keyLen, nullptr, valueLen, 0))
     {
@@ -63,6 +64,7 @@ void On_action_add_collection(const ContractID& cid)
             return On_error("error of move next");
         }
 
+        // deserialization of collections
         yas::mem_istream ms(iv.data() + sizeof(Serialize::Buffer), iv.size() - sizeof(Serialize::Buffer));
         yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
 
@@ -74,9 +76,10 @@ void On_action_add_collection(const ContractID& cid)
         }
     }
 
+    // adding new collection
     collections.push_back(collection);
 
-    // serialize
+    // serialization of collections
     {
         yas::count_ostream cs;
         yas::binary_oarchive<yas::count_ostream, Serialize::YAS_FLAGS> sizeCalc(cs);
@@ -91,6 +94,7 @@ void On_action_add_collection(const ContractID& cid)
         yas::binary_oarchive<yas::mem_ostream, Serialize::YAS_FLAGS> ar(ms);
         ar& collections;
 
+        // transaction for saving new collections
         Env::GenerateKernel(&cid, Serialize::Actions::AddCollection::s_iMethod, buf, paramSize, nullptr, 0, nullptr, 0,
             "Added new collection", 0);
     }
@@ -98,19 +102,28 @@ void On_action_add_collection(const ContractID& cid)
 
 void On_action_view_collections(const ContractID& cid)
 {
+    // creating key
     Env::Key_T<Serialize::Key1> key;
     _POD_(key.m_Prefix.m_Cid) = cid;
     _POD_(key.m_KeyInContract.key) = 0;
 
+    // loading serialized buf of collections
     uint32_t valueLen = 0, keyLen = sizeof(const char*);
 
     Env::VarReader reader(key, key);
-    reader.MoveNext(&key, keyLen, nullptr, valueLen, 0);
+    if (!reader.MoveNext(&key, keyLen, nullptr, valueLen, 0))
+    {
+        return On_error("error of move next");
+    }
 
     std::vector<char> v(valueLen, '\0');
     auto buf = reinterpret_cast<Serialize::Buffer*>(v.data());
-    reader.MoveNext(&key, keyLen, buf, valueLen, 1);
+    if (!reader.MoveNext(&key, keyLen, buf, valueLen, 1))
+    {
+        return On_error("error of move next");
+    }
 
+    // deserialization of collections
     yas::mem_istream ms(v.data() + sizeof(Serialize::Buffer), v.size() - sizeof(Serialize::Buffer));
     yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
 
@@ -118,6 +131,7 @@ void On_action_view_collections(const ContractID& cid)
 
     iar& collections;
 
+    // printing all collecitons' name
     Env::DocAddGroup("collections");
     for (auto coll : collections)
     {
@@ -127,6 +141,36 @@ void On_action_view_collections(const ContractID& cid)
 
 void On_action_add_attribute_to_collection(const ContractID& cid)
 {
+    // creating key for collections
+    Env::Key_T<Serialize::Key1> key;
+    _POD_(key.m_Prefix.m_Cid) = cid;
+    _POD_(key.m_KeyInContract.key) = 0;
+
+    // loading serialized buf of collections
+    uint32_t valueLen = 0, keyLen = sizeof(Serialize::Key);
+
+    Env::VarReader reader(key, key);
+    Serialize::Collections collections;
+
+    if (!reader.MoveNext(&key, keyLen, nullptr, valueLen, 0))
+    {
+        return On_error("error of move next");
+    }
+
+    std::vector<char> iv(valueLen, '\0');
+    auto buf = reinterpret_cast<Serialize::Buffer*>(iv.data());
+    if (!reader.MoveNext(&key, keyLen, buf, valueLen, 1))
+    {
+        return On_error("error of move next");
+    }
+
+    // deserialization collections
+    yas::mem_istream ms(iv.data() + sizeof(Serialize::Buffer), iv.size() - sizeof(Serialize::Buffer));
+    yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
+
+    iar& collections;
+
+    // loading name of collection, that will get new attribute, from function parameters
     char collectionName[0x20];
     uint32_t nNameSize = 0;
     nNameSize = Env::DocGetText("collection_name", collectionName, sizeof(collectionName));
@@ -139,6 +183,20 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
     Serialize::Collection collection;
     collection.name = collectionNameStr;
 
+    // checking if such collection already exists
+    if (std::find(collections.begin(), collections.end(), collection) == collections.end())
+    {
+        return On_error("collection_name doesn't exist");
+    }
+
+    // creating key for attributes
+    Serialize::Hash256 name_hash = Serialize::get_name_hash(collectionNameStr.c_str(), collectionNameStr.size());
+    Serialize::Key key_(name_hash);
+    Env::Key_T<Serialize::Key> keyAtt = { .m_KeyInContract = key_ };
+    keyAtt.m_Prefix.m_Cid = cid;
+
+
+    // loading name of attribute for collection  from function parameters
     char attributeName[0x20];
     nNameSize = 0;
     nNameSize = Env::DocGetText("attribute_name", attributeName, sizeof(attributeName));
@@ -150,53 +208,15 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
     std::string attributeNameStr(attributeName, nNameSize);
     Serialize::Attribute attribute;
     attribute.name = attributeNameStr;
-
-    Env::Key_T<Serialize::Key1> key;
-    _POD_(key.m_Prefix.m_Cid) = cid;
-    _POD_(key.m_KeyInContract.key) = 0;
-
-    uint32_t valueLen = 0, keyLen = sizeof(Serialize::Key);
-
-    // deserialize collection
-    Env::VarReader reader(key, key);
-    Serialize::Collections collections;
-
-    if (reader.MoveNext(&key, keyLen, nullptr, valueLen, 0))
-    {
-        std::vector<char> iv(valueLen, '\0');
-        auto buf = reinterpret_cast<Serialize::Buffer*>(iv.data());
-        if (!reader.MoveNext(&key, keyLen, buf, valueLen, 1))
-        {
-            return On_error("error of move next");
-        }
-
-        yas::mem_istream ms(iv.data() + sizeof(Serialize::Buffer), iv.size() - sizeof(Serialize::Buffer));
-        yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
-
-        iar& collections;
-
-        if (std::find(collections.begin(), collections.end(), collection) == collections.end())
-        {
-            return On_error("collection_name doesn't exist");
-        }
-    }
-
-
-    // attribute
-    // deserialize vector of attributes
-
-    Serialize::Hash256 name_hash = Serialize::get_name_hash(collectionNameStr.c_str(), collectionNameStr.size());
-    Serialize::Key key_(name_hash);
-    Env::Key_T<Serialize::Key> keyAtt = { .m_KeyInContract = key_ };
-    keyAtt.m_Prefix.m_Cid = cid;
-
+    
+    // loading vector of attributes for collection
     Env::VarReader readerAtt(keyAtt, keyAtt);
     Serialize::Attributes attributes;
 
     valueLen = 0;
     keyLen = sizeof(Serialize::Key);
 
-    //?? 
+    // если по ключу не достается ничего, то в пустой созданный attributes
     if (readerAtt.MoveNext(&keyAtt, keyLen, nullptr, valueLen, 0))
     {
         std::vector<char> iv(valueLen, '\0');
@@ -206,11 +226,13 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
             return On_error("error of move next");
         }
 
+        // deserialization attributes of collection
         yas::mem_istream ms(iv.data() + sizeof(Serialize::Buffer), iv.size() - sizeof(Serialize::Buffer));
         yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
 
         iar& attributes;
 
+        // checking if such attribute already exists
         if (std::find(attributes.attributes.begin(), attributes.attributes.end(), attribute) != attributes.attributes.end())
         {
             return On_error("attributes_name exists");
@@ -219,7 +241,7 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
 
     attributes.attributes.push_back(attribute);
 
-    // serialize attributes
+    // serialization of attributes
     {
         yas::count_ostream cs;
         yas::binary_oarchive<yas::count_ostream, Serialize::YAS_FLAGS> sizeCalc(cs);
@@ -234,14 +256,15 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
         yas::binary_oarchive<yas::mem_ostream, Serialize::YAS_FLAGS> ar(ms);
         ar& attributes;
 
+        // transaction for saving new attributes
         Env::GenerateKernel(&cid, Serialize::Actions::AddAttribute::s_iMethod, buf, paramSize, nullptr, 0, nullptr, 0,
             "Added new attribute", 0);
     }
-
 }
 
 void On_action_view_attributes_by_collection(const ContractID& cid)
 {
+    // loading name of collection, from wich will be loaded attributes, from function parameters
     char collectionName[0x20];
     uint32_t nNameSize = 0;
     nNameSize = Env::DocGetText("collection_name", collectionName, sizeof(collectionName));
@@ -250,26 +273,24 @@ void On_action_view_attributes_by_collection(const ContractID& cid)
         return On_error("collection_name should be non-empty");
     }
 
+    // creating key for loading attributes
     std::string collectionNameStr(collectionName, nNameSize);
-    Serialize::Collection collection;
-    collection.name = collectionNameStr;
-
-
     Serialize::Hash256 name_hash = Serialize::get_name_hash(collectionNameStr.c_str(), collectionNameStr.size());
     Serialize::Key key_(name_hash);
     Env::Key_T<Serialize::Key> keyAtt = { .m_KeyInContract = key_ };
     keyAtt.m_Prefix.m_Cid = cid;
 
+    // loading vector of attributes for collection
     Env::VarReader readerAtt(keyAtt, keyAtt);
     Serialize::Attributes attributes;
 
     uint32_t valueLen = 0, keyLen = sizeof(Serialize::Key);
 
-    //?? 
     if (!readerAtt.MoveNext(&keyAtt, keyLen, nullptr, valueLen, 0))
     {
         return On_error("error of move next");
     }
+
     std::vector<char> iv(valueLen, '\0');
     auto buf = reinterpret_cast<Serialize::Buffer*>(iv.data());
     if (!readerAtt.MoveNext(&keyAtt, keyLen, buf, valueLen, 1))
@@ -277,18 +298,18 @@ void On_action_view_attributes_by_collection(const ContractID& cid)
         return On_error("error of move next");
     }
 
+    // deserialization attributes
     yas::mem_istream ms(iv.data() + sizeof(Serialize::Buffer), iv.size() - sizeof(Serialize::Buffer));
     yas::binary_iarchive<yas::mem_istream, Serialize::YAS_FLAGS> iar(ms);
 
     iar& attributes;
 
-
+    // printing all attributes for collection 
     Env::DocAddGroup("attributes");
     for (auto att : attributes.attributes)
     {
         Env::DocAddText("", att.name.c_str());
     }
-
 }
 
 
@@ -317,22 +338,22 @@ BEAM_EXPORT void Method_0()
                 Env::DocGroup grRole("player");
 
                 {
-                    Env::DocGroup grMethod("add");
+                    Env::DocGroup grMethod("add_collection");
                     Env::DocAddText("cid", "ContractID");
                     Env::DocAddText("collection_name", "string");
                 }
                 {
-                    Env::DocGroup grMethod("view");
+                    Env::DocGroup grMethod("view_collections");
                     Env::DocAddText("cid", "ContractID"); 
                 }
                 {
-                    Env::DocGroup grMethod("add_att");
+                    Env::DocGroup grMethod("add_attribute");
                     Env::DocAddText("cid", "ContractID");
                     Env::DocAddText("collection_name", "string");
                     Env::DocAddText("attribute_name", "string");
                 }
                 {
-                    Env::DocGroup grMethod("view_att");
+                    Env::DocGroup grMethod("view_attributes");
                     Env::DocAddText("cid", "ContractID");
                     Env::DocAddText("collection_name", "string");
                 }
@@ -360,10 +381,10 @@ BEAM_EXPORT void Method_1()
 {
     const std::vector<std::pair<const char*, Action_func_t>> VALID_PLAYER_ACTIONS = 
     {
-        {"add", On_action_add_collection},
-        {"view", On_action_view_collections},
-        {"add_att", On_action_add_attribute_to_collection},
-        {"view_att", On_action_view_attributes_by_collection}
+        {"add_collection", On_action_add_collection},
+        {"view_collections", On_action_view_collections},
+        {"add_attribute", On_action_add_attribute_to_collection},
+        {"view_attributes", On_action_view_attributes_by_collection}
     };
 
     const std::vector<std::pair<const char*, Action_func_t>> VALID_MANAGER_ACTIONS = 
