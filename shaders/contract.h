@@ -1,8 +1,10 @@
 #pragma once
 
-#include "serialization.h"
 #include <string>
 #include <vector>
+
+#include "serialization.h"
+#include "utility.h"
 
 namespace Dogs
 {
@@ -40,6 +42,7 @@ namespace Dogs
 			ar& name;
 		}
 	};
+
 	struct Attributes
 	{
 		std::string collectionName;
@@ -58,20 +61,13 @@ namespace Dogs
 	};
 
 
-	using Hash256 = Opaque<32>;
-	Hash256 get_name_hash(const char* name, size_t len)
-	{
-		Hash256 res;
-		HashProcessor::Sha256 hp;
-		hp.Write(name, len);
-		hp >> res;
-		return res;
-	}
+	/////////////////////////////////////////////////////////////////////////////////////////
+
 
 	struct Key
 	{
-		Hash256 name_hash;
-		Key(const Hash256& key)
+		Utility::Hash256 name_hash;
+		Key(const Utility::Hash256& key)
 		{
 			Env::Memcpy(&name_hash, &key, sizeof(name_hash));
 		}

@@ -24,17 +24,17 @@ namespace Serialization
 	template<typename ObjT>
 	Serialization::Buffer* serialize(const ObjT& object)
 	{
-		yas::count_ostream cs;
-		yas::binary_oarchive<yas::count_ostream, Serialization::YAS_FLAGS> sizeCalc(cs);
+		yas::count_ostream cos;
+		yas::binary_oarchive<yas::count_ostream, Serialization::YAS_FLAGS> sizeCalc(cos);
 		sizeCalc& object;
 
-		auto paramSize = sizeof(Serialization::Buffer) + cs.total_size;
-		std::vector<char> ov(paramSize, '\0');
-		Serialization::Buffer* buf = reinterpret_cast<Serialization::Buffer*>(ov.data());
-		buf->size = cs.total_size;
+		auto paramSize = sizeof(Serialization::Buffer) + cos.total_size;
+		std::vector<char> v(paramSize, '\0');
+		Serialization::Buffer* buf = reinterpret_cast<Serialization::Buffer*>(v.data());
+		buf->size = cos.total_size;
 
-		yas::mem_ostream ms(reinterpret_cast<char*>(buf + 1), buf->size);
-		yas::binary_oarchive<yas::mem_ostream, Serialization::YAS_FLAGS> ar(ms);
+		yas::mem_ostream mos(reinterpret_cast<char*>(buf + 1), buf->size);
+		yas::binary_oarchive<yas::mem_ostream, Serialization::YAS_FLAGS> ar(mos);
 		ar& object;
 
 		return buf;
@@ -44,8 +44,8 @@ namespace Serialization
 	template<typename ObjT>
 	ObjT deserialize(const void* ptr, std::size_t size)
 	{
-		yas::mem_istream ms(ptr, size);
-		yas::binary_iarchive<yas::mem_istream, Serialization::YAS_FLAGS> iar(ms);
+		yas::mem_istream mis(ptr, size);
+		yas::binary_iarchive<yas::mem_istream, Serialization::YAS_FLAGS> iar(mis);
 
 		ObjT obj;
 		iar& obj;

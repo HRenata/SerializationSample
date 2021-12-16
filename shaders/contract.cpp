@@ -41,11 +41,11 @@ BEAM_EXPORT void Method_2(Serialization::Buffer& paramsBuffer)
 	auto serializedBuffer = Serialization::serialize(attributes);
 
 	//creating key for saving attributes
-	Dogs::Hash256 name_hash = Dogs::get_name_hash(attributes.collectionName.c_str(), attributes.collectionName.size());
-	Dogs::Key key_(name_hash);
+	Utility::Hash256 nameHash = Utility::get_hash(attributes.collectionName.c_str(), attributes.collectionName.size());
+	Dogs::Key keyAtt(nameHash);
 
 	// saving attributes
-	Env::SaveVar(&key_, sizeof(key_), serializedBuffer,
+	Env::SaveVar(&keyAtt, sizeof(keyAtt), serializedBuffer,
 		sizeof(Serialization::Buffer) + serializedBuffer->size, KeyTag::Internal);
 }
 
@@ -55,9 +55,9 @@ BEAM_EXPORT void Method_3(Serialization::Buffer& paramsBuffer)
 	Dogs::Attributes attributes = Serialization::deserialize<Dogs::Attributes>(paramsBuffer.data, paramsBuffer.size);
 
 	//creating key
-	Dogs::Hash256 name_hash = Dogs::get_name_hash(attributes.collectionName.c_str(), attributes.collectionName.size());
-	Dogs::Key key_(name_hash);
+	Utility::Hash256 nameHash = Utility::get_hash(attributes.collectionName.c_str(), attributes.collectionName.size());
+	Dogs::Key keyAtt(nameHash);
 	
 	// saving attributes
-	Env::SaveVar(&key_, sizeof(key_), &paramsBuffer, sizeof(Serialization::Buffer) + paramsBuffer.size, KeyTag::Internal);
+	Env::SaveVar(&keyAtt, sizeof(keyAtt), &paramsBuffer, sizeof(Serialization::Buffer) + paramsBuffer.size, KeyTag::Internal);
 }
