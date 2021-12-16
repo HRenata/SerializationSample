@@ -4,6 +4,7 @@
 #include "contract_sid.i"
 
 #include <algorithm>
+#include <memory>
 
 void On_error(const char* msg)
 {
@@ -57,16 +58,15 @@ void On_action_add_collection(const ContractID& cid)
     Env::VarReader reader(key, key);
     if (reader.MoveNext(&key, keyLen, nullptr, valueLen, 0))
     {
-        std::vector<char> v(valueLen, '\0');
-        auto buf = reinterpret_cast<Serialization::Buffer*>(v.data());
-        if (!reader.MoveNext(&key, keyLen, buf, valueLen, 1))
+        auto buf = std::make_unique<uint8_t[]>(valueLen + 1); // 0-term
+        if (!reader.MoveNext(&key, keyLen, buf.get(), valueLen, 1))
         {
             return On_error("error of move next");
         }
 
         // deserialization of collections
-        collections = Serialization::deserialize<Dogs::Collections>(v.data() + sizeof(Serialization::Buffer),
-            v.size() - sizeof(Serialization::Buffer));
+        collections = Serialization::deserialize<Dogs::Collections>(buf.get() + sizeof(Serialization::Buffer),
+            valueLen - sizeof(Serialization::Buffer));
 
         if (std::find(collections.begin(), collections.end(), collection) != collections.end())
         {
@@ -102,16 +102,16 @@ void On_action_view_collections(const ContractID& cid)
         return On_error("error of move next");
     }
 
-    std::vector<char> v(valueLen, '\0');
-    auto buf = reinterpret_cast<Serialization::Buffer*>(v.data());
-    if (!reader.MoveNext(&key, keyLen, buf, valueLen, 1))
+
+    auto buf = std::make_unique<uint8_t[]>(valueLen + 1); // 0-term
+    if (!reader.MoveNext(&key, keyLen, buf.get(), valueLen, 1))
     {
         return On_error("error of move next");
     }
 
     // deserialization of collections
-    Dogs::Collections collections = Serialization::deserialize<Dogs::Collections>(v.data() + sizeof(Serialization::Buffer),
-        v.size() - sizeof(Serialization::Buffer));
+    Dogs::Collections collections = Serialization::deserialize<Dogs::Collections>(buf.get() + sizeof(Serialization::Buffer),
+        valueLen - sizeof(Serialization::Buffer));
 
     // printing all collecitons' name
     Env::DocAddGroup("collections");
@@ -137,16 +137,15 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
         return On_error("error of move next");
     }
 
-    std::vector<char> iv(valueLen, '\0');
-    auto buf = reinterpret_cast<Serialization::Buffer*>(iv.data());
-    if (!reader.MoveNext(&key, keyLen, buf, valueLen, 1))
+    auto buf = std::make_unique<uint8_t[]>(valueLen + 1); // 0-term
+    if (!reader.MoveNext(&key, keyLen, buf.get(), valueLen, 1))
     {
         return On_error("error of move next");
     }
 
-    // deserialization collections
-    Dogs::Collections collections = Serialization::deserialize<Dogs::Collections>(iv.data() + sizeof(Serialization::Buffer),
-        iv.size() - sizeof(Serialization::Buffer));
+    // deserialization of collections
+    Dogs::Collections collections = Serialization::deserialize<Dogs::Collections>(buf.get() + sizeof(Serialization::Buffer),
+        valueLen - sizeof(Serialization::Buffer));
 
     // loading name of collection, that will get new attribute, from function parameters
     char collectionName[0x20];
@@ -196,16 +195,16 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
     // если по ключу не достается ничего, то в пустой созданный attributes
     if (readerAtt.MoveNext(&keyAtt, keyLen, nullptr, valueLen, 0))
     {
-        std::vector<char> iv(valueLen, '\0');
-        auto buf = reinterpret_cast<Serialization::Buffer*>(iv.data());
-        if (!readerAtt.MoveNext(&keyAtt, keyLen, buf, valueLen, 1))
+        auto buf = std::make_unique<uint8_t[]>(valueLen + 1); // 0-term
+        if (!readerAtt.MoveNext(&keyAtt, keyLen, buf.get(), valueLen, 1))
         {
             return On_error("error of move next");
         }
 
-        // deserialization attributes of collection
-        attributes = Serialization::deserialize<Dogs::Attributes>(iv.data() + sizeof(Serialization::Buffer),
-            iv.size() - sizeof(Serialization::Buffer));
+        // deserialization attributes
+        attributes = Serialization::deserialize<Dogs::Attributes>(buf.get() + sizeof(Serialization::Buffer),
+            valueLen - sizeof(Serialization::Buffer));
+
 
         // checking if such attribute already exists
         if (std::find(attributes.attributes.begin(), attributes.attributes.end(), attribute) != attributes.attributes.end())
@@ -252,16 +251,15 @@ void On_action_view_attributes_by_collection(const ContractID& cid)
         return On_error("error of move next");
     }
 
-    std::vector<char> v(valueLen, '\0');
-    auto buf = reinterpret_cast<Serialization::Buffer*>(v.data());
-    if (!readerAtt.MoveNext(&keyAtt, keyLen, buf, valueLen, 1))
+    auto buf = std::make_unique<uint8_t[]>(valueLen + 1); // 0-term
+    if(!readerAtt.MoveNext(&keyAtt, keyLen, buf.get(), valueLen, 1))
     {
         return On_error("error of move next");
     }
 
     // deserialization attributes
-    Dogs::Attributes attributes = Serialization::deserialize< Dogs::Attributes>(v.data() + sizeof(Serialization::Buffer),
-        v.size() - sizeof(Serialization::Buffer));
+    Dogs::Attributes attributes = Serialization::deserialize<Dogs::Attributes>(buf.get() + sizeof(Serialization::Buffer),
+        valueLen - sizeof(Serialization::Buffer));
 
     // printing all attributes for collection 
     Env::DocAddGroup("attributes");

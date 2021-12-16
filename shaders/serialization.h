@@ -6,8 +6,9 @@
 #define __YAS_THROW_EXCEPTION(type, msg) Env::Halt();
 #include <yas/serialize.hpp>
 #include <yas/std_types.hpp>
-
 #endif
+
+#include <memory>
 
 namespace Serialization
 {
@@ -22,30 +23,48 @@ namespace Serialization
 	};
 
 	template<typename ObjT>
-	Serialization::Buffer* serialize(const ObjT& object)
+	Buffer* serialize(const ObjT& object)
 	{
 		yas::count_ostream cos;
-		yas::binary_oarchive<yas::count_ostream, Serialization::YAS_FLAGS> sizeCalc(cos);
+		yas::binary_oarchive<yas::count_ostream, YAS_FLAGS> sizeCalc(cos);
 		sizeCalc& object;
 
-		auto paramSize = sizeof(Serialization::Buffer) + cos.total_size;
+		auto paramSize = sizeof(Buffer) + cos.total_size;
 		std::vector<char> v(paramSize, '\0');
-		Serialization::Buffer* buf = reinterpret_cast<Serialization::Buffer*>(v.data());
+		Buffer* buf = reinterpret_cast<Buffer*>(v.data());
 		buf->size = cos.total_size;
 
 		yas::mem_ostream mos(reinterpret_cast<char*>(buf + 1), buf->size);
-		yas::binary_oarchive<yas::mem_ostream, Serialization::YAS_FLAGS> ar(mos);
+		yas::binary_oarchive<yas::mem_ostream, YAS_FLAGS> ar(mos);
 		ar& object;
 
 		return buf;
 	}
 
+	//template<typename ObjT>
+	//std::unique_ptr<Buffer> serialize(const ObjT& object)
+	//{
+	//	yas::count_ostream cos;
+	//	yas::binary_oarchive<yas::count_ostream, YAS_FLAGS> sizeCalc(cos);
+	//	sizeCalc& object;
 
+	//	auto paramSize = sizeof(Buffer) + cos.total_size;
+	//	
+	//	std::unique_ptr<Buffer> buf(static_cast<Buffer*>(::operator new(paramSize)));
+	//	
+	//	yas::mem_ostream mos(reinterpret_cast<char*>(buf.get() + 1), buf.get()->size);
+	//	yas::binary_oarchive<yas::mem_ostream, YAS_FLAGS> ar(mos);
+	//	ar& object;
+
+	//	return buf;
+	//}
+
+	
 	template<typename ObjT>
 	ObjT deserialize(const void* ptr, std::size_t size)
 	{
 		yas::mem_istream mis(ptr, size);
-		yas::binary_iarchive<yas::mem_istream, Serialization::YAS_FLAGS> iar(mis);
+		yas::binary_iarchive<yas::mem_istream, YAS_FLAGS> iar(mis);
 
 		ObjT obj;
 		iar& obj;
