@@ -14,7 +14,7 @@ void On_error(const char* msg)
     }
 }
 
-// MANAGER
+// MANAGER  
 void On_action_create_contract(const ContractID& cid)
 {
     Env::GenerateKernel(nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, "Create Serialize contract", 0);
