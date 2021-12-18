@@ -185,8 +185,8 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
     attribute.name = attributeNameStr;
 
     // creating key for attributes
-    Utility::Hash256 name_hash = Utility::get_hash(collectionNameStr.c_str(), collectionNameStr.size());
-    Dogs::Attributes::Key key_(0, name_hash);
+    Utility::Hash256 attributeNameHash = Utility::get_hash(collectionNameStr.c_str(), collectionNameStr.size());
+    Dogs::Attributes::Key key_(0, attributeNameHash);
     Env::Key_T<Dogs::Attributes::Key> keyAtt = { .m_KeyInContract = key_ };
     keyAtt.m_Prefix.m_Cid = cid;
 
@@ -242,8 +242,8 @@ void On_action_view_attributes_by_collection(const ContractID& cid)
 
     // creating key for loading attributes
     std::string collectionNameStr(collectionName, collectionNameSize);
-    Utility::Hash256 name_hash = Utility::get_hash(collectionNameStr.c_str(), collectionNameStr.size());
-    Dogs::Attributes::Key key_(0, name_hash);
+    Utility::Hash256 attributeNameHash = Utility::get_hash(collectionNameStr.c_str(), collectionNameStr.size());
+    Dogs::Attributes::Key key_(0, attributeNameHash);
     Env::Key_T<Dogs::Attributes::Key> keyAtt = { .m_KeyInContract = key_ };
     keyAtt.m_Prefix.m_Cid = cid;
 

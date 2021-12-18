@@ -68,12 +68,12 @@ namespace Dogs
 	{
 		struct Key : public Collections::Key
 		{
-			Utility::Hash256 name_hash;
+			Utility::Hash256 attributeNameHash;
 
 			Key() = default;
-			Key(const int key, const Utility::Hash256& name) : Collections::Key(key)
+			Key(const int key, const Utility::Hash256& collectionName) : Collections::Key(key)
 			{
-				Env::Memcpy(&name_hash, &name, sizeof(name_hash));
+				Env::Memcpy(&attributeNameHash, &collectionName, sizeof(attributeNameHash));
 			}
 		};
 
@@ -92,7 +92,50 @@ namespace Dogs
 		}
 	};
 
+	struct Image
+	{
+		std::string hash;
 
+		bool operator==(const Image& other) const
+		{
+			return hash == other.hash;
+		}
+
+		template<typename Ar>
+		void serialize(Ar& ar)
+		{
+			ar& hash;
+		}
+	};
+
+	struct Images
+	{
+		struct Key : public Attributes::Key
+		{
+			Utility::Hash256 attributeNameHash;
+
+			Key() = default;
+			Key(const int key, const Utility::Hash256& collectionName, const Utility::Hash256& attributeName) 
+				: Attributes::Key(key, collectionName)
+			{
+				Env::Memcpy(&attributeNameHash, &attributeName, sizeof(attributeNameHash));
+			}
+		};
+
+		std::string collectionName;
+		std::vector<Dogs::Attribute> attributes;
+
+		bool operator==(const Attributes& other) const
+		{
+			return collectionName == other.collectionName && attributes == other.attributes;
+		}
+
+		template<typename Ar>
+		void serialize(Ar& ar)
+		{
+			ar& collectionName& attributes;
+		}
+	};
 	/////////////////////////////////////////////////////////////////////////////////////////
 
 
