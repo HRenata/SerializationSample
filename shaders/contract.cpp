@@ -55,27 +55,45 @@ BEAM_EXPORT void Method_3(Serialization::Buffer& paramsBuffer)
 	Dogs::Attributes attributes = Serialization::deserialize<Dogs::Attributes>(paramsBuffer.data, paramsBuffer.size);
 
 	//creating key for saving attributes
-	Utility::Hash256 attributeNameHash = Utility::get_hash(attributes.collectionName.c_str(), attributes.collectionName.size());
-	Dogs::Attributes::Key keyAtt(0, attributeNameHash);
+	Utility::Hash256 collectionNameHash = Utility::get_hash(attributes.collectionName.c_str(), attributes.collectionName.size());
+	Dogs::Attributes::Key keyAtt(0, collectionNameHash);
 	
 	// saving attributes
 	Env::SaveVar(&keyAtt, sizeof(keyAtt), &paramsBuffer, sizeof(Serialization::Buffer) + paramsBuffer.size, KeyTag::Internal);
 
 
-	// creating of attributes with empty vector for last collection
-	Dogs::Images images;
+	// creating of attributes with empty vector of images for last collection
+	Dogs::ImagesInfos images;
 	images.attributeName = attributes.attributes[attributes.attributes.size() - 1].name;
 
 	// serialization of attributes for last collection
 	auto serializedBuffer = Serialization::serialize(images);
 
 	//creating key for saving images
-	Utility::Hash256 imageNameHash = Utility::get_hash(images.attributeName.c_str(), images.attributeName.size());
-	Dogs::Attributes::Key keyIm(0, imageNameHash);
+	Utility::Hash256 attributeNameHash = Utility::get_hash(images.attributeName.c_str(), images.attributeName.size());
+	Dogs::ImagesInfos::Key keyIm(0, collectionNameHash, attributeNameHash);
 
-	// saving attributes
+	// saving images
 	Env::SaveVar(&keyIm, sizeof(keyIm), serializedBuffer,
 		sizeof(Serialization::Buffer) + serializedBuffer->size, KeyTag::Internal);
+}
+
+BEAM_EXPORT void Method_4(Serialization::Buffer& paramsBuffer)
+{
+	// deserialization of attributes
+	Dogs::ImagesInfos images = Serialization::deserialize<Dogs::ImagesInfos>(paramsBuffer.data, paramsBuffer.size);
+
+	//creating key for saving attributes
+	Utility::Hash256 collectionNameHash = Utility::get_hash(images.collectionName.c_str(), images.collectionName.size());
+	Utility::Hash256 attributeNameHash = Utility::get_hash(images.attributeName.c_str(), images.attributeName.size());
+	Dogs::ImagesInfos::Key keyIm(0, collectionNameHash, attributeNameHash);
+
+	// saving attributes
+	Env::SaveVar(&keyIm, sizeof(keyIm), &paramsBuffer, sizeof(Serialization::Buffer) + paramsBuffer.size, KeyTag::Internal);
+}
+
+BEAM_EXPORT void Method_5(const Gallery::Image& image)
+{
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -84,7 +102,7 @@ const T& min(const T& a, const T& b)
 {
 	return (b < a) ? b : a;
 }
-BEAM_EXPORT void Method_4(const Gallery::Image& image)
+BEAM_EXPORT void Method_6(const Gallery::Image& image)
 {
 	// picture to uint8_t*
 	auto pData = reinterpret_cast<const uint8_t*>(&image + 1);

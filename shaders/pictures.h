@@ -47,7 +47,7 @@ namespace Gallery
     {
         struct AddExhibit
         {
-            static const uint32_t s_iMethod = 4;
+            static const uint32_t s_iMethod = 6;
             PubKey m_pkArtist;
             uint32_t m_Size;
             // followed by the data

@@ -181,9 +181,9 @@ void On_action_view_attributes_by_collection(const ContractID& cid)
     }
 
     // creating key for loading attributes
-    Utility::Hash256 attributeNameHash = Utility::get_hash(collectionName.c_str(), collectionName.size());
+    Utility::Hash256 collectionNameHash = Utility::get_hash(collectionName.c_str(), collectionName.size());
     
-    Dogs::Attributes::Key key(0, attributeNameHash);
+    Dogs::Attributes::Key key(0, collectionNameHash);
     Env::Key_T<Dogs::Attributes::Key> keyAtt = { .m_KeyInContract = key };
     keyAtt.m_Prefix.m_Cid = cid;
 
@@ -201,6 +201,232 @@ void On_action_view_attributes_by_collection(const ContractID& cid)
     {
         Env::DocAddText("", att.name.c_str());
     }
+}
+
+void On_action_add_image_to_attribute(const ContractID& cid)
+{
+    // loading name of collection, that will get new attribute, from function parameters
+    std::string collectionName = getTextNameToString("collection_name");
+    if (collectionName.empty())
+    {
+        return On_error("collection_name should be non-empty");
+    }
+
+    // loading name of attribute for collection  from function parameters
+    std::string attributeName = getTextNameToString("attribute_name");
+    if (collectionName.empty())
+    {
+        return On_error("attribute_name should be non-empty");
+    }
+
+    // creation collection
+    Dogs::Collection collection;
+    collection.name = collectionName;
+
+    // creating key for collections
+    Env::Key_T<Dogs::Collections::Key> keyColl;
+    _POD_(keyColl.m_Prefix.m_Cid) = cid;
+    _POD_(keyColl.m_KeyInContract.pubKey) = 0;
+
+    // loading collections
+    Dogs::Collections collections;
+
+    if (!loadAndDeserializeObject(collections, keyColl))
+    {
+        return On_error("Cann't read collections");
+    }
+
+    // checking if such collection name doesn't exist
+    if (std::find(collections.collections.begin(), collections.collections.end(), collection) == collections.collections.end())
+    {
+        return On_error("collection_name doesn't exist");
+    }
+
+
+    // creating attribute
+    Dogs::Attribute attribute;
+    attribute.name = attributeName;
+
+    // creating key for attributes
+    Utility::Hash256 collectionNameHash = Utility::get_hash(collectionName.c_str(), collectionName.size());
+    Dogs::Attributes::Key key(0, collectionNameHash);
+    Env::Key_T<Dogs::Attributes::Key> keyAtt = { .m_KeyInContract = key };
+    keyAtt.m_Prefix.m_Cid = cid;
+
+    // loading attributes for collection
+    Dogs::Attributes attributes;
+
+    if (!loadAndDeserializeObject(attributes, keyAtt))
+    {
+        return On_error("Cann't read collections");
+    }
+
+    // checking if such attribute already exists
+    if (std::find(attributes.attributes.begin(), attributes.attributes.end(), attribute) == attributes.attributes.end())
+    {
+        return On_error("attributes_name doesn't exist");
+    }
+
+
+    // load image to data
+    // load size
+    auto imageSize = Env::DocGetBlob("data", nullptr, 0);
+    if (!imageSize)
+    {
+        return On_error("data not specified");
+    }
+
+    uint32_t imageObjSize = sizeof(Gallery::Image) + imageSize;
+    auto* image = (Gallery::Image*)Env::Heap_Alloc(imageObjSize);
+    image->m_Size = imageSize;
+
+    //load image to Image
+    if (Env::DocGetBlob("data", image + 1, imageSize) != imageSize)
+    {
+        On_error("data can't be parsed");
+        return;
+    }
+
+    // creating key for attributes
+    Utility::Hash256 attributeNameHash = Utility::get_hash(collectionName.c_str(), collectionName.size());
+    Dogs::ImagesInfos::Key key_(0, collectionNameHash, attributeNameHash);
+    Env::Key_T<Dogs::Attributes::Key> keyIm = { .m_KeyInContract = key_ };
+    keyIm.m_Prefix.m_Cid = cid;
+
+    // loading images for 
+    Dogs::ImagesInfos images;
+
+    if (!loadAndDeserializeObject(images, keyIm))
+    {
+        return On_error("Cann't read imageInfos");
+    }
+
+    // getting image hash
+    // picture to uint8_t*
+    auto pData = reinterpret_cast<const uint8_t*>(image + 1);
+    uint32_t nData = image->m_Size;
+    auto imageHash = Utility::get_hash(pData, nData);
+
+    // creating image info
+    Dogs::ImageInfo imageInfo;
+    imageInfo.hash = std::string(reinterpret_cast<char const*>(imageHash.m_p), sizeof imageHash.m_p);
+
+    // checking if such image already exists
+    if (std::find(images.images.begin(), images.images.end(), imageInfo) != images.images.end())
+    {
+        return On_error("image exists");
+    }
+
+    images.images.push_back(imageInfo);
+
+    // serialization of attributes
+    auto serializedBuffer = Serialization::serialize(images);
+
+    // transaction for saving image info
+    Env::GenerateKernel(&cid, Dogs::Actions::AddImageInfo::s_iMethod, serializedBuffer,
+        sizeof(Serialization::Buffer) + serializedBuffer->size, nullptr, 0, nullptr, 0,
+        "Added new attribute", 0);
+
+    // transaction for saving image
+    uint32_t charge = 90000;
+    charge += imageSize * 110;
+
+    Env::GenerateKernel(&cid, Dogs::Actions::AddImage::s_iMethod, image, imageObjSize, nullptr, 0,
+        nullptr, 0, "Saved new image", charge);
+}
+
+void On_action_get_all_images_ids(const ContractID& cid)
+{
+    // loading name of collection, that will get new attribute, from function parameters
+    std::string collectionName = getTextNameToString("collection_name");
+    if (collectionName.empty())
+    {
+        return On_error("collection_name should be non-empty");
+    }
+
+    // loading name of attribute for collection  from function parameters
+    std::string attributeName = getTextNameToString("attribute_name");
+    if (collectionName.empty())
+    {
+        return On_error("attribute_name should be non-empty");
+    }
+
+    // creation collection
+    Dogs::Collection collection;
+    collection.name = collectionName;
+
+    // creating key for collections
+    Env::Key_T<Dogs::Collections::Key> keyColl;
+    _POD_(keyColl.m_Prefix.m_Cid) = cid;
+    _POD_(keyColl.m_KeyInContract.pubKey) = 0;
+
+    // loading collections
+    Dogs::Collections collections;
+
+    if (!loadAndDeserializeObject(collections, keyColl))
+    {
+        return On_error("Cann't read collections");
+    }
+
+    // checking if such collection name doesn't exist
+    if (std::find(collections.collections.begin(), collections.collections.end(), collection) == collections.collections.end())
+    {
+        return On_error("collection_name doesn't exist");
+    }
+
+
+    // creating attribute
+    Dogs::Attribute attribute;
+    attribute.name = attributeName;
+
+    // creating key for attributes
+    Utility::Hash256 collectionNameHash = Utility::get_hash(collectionName.c_str(), collectionName.size());
+    Dogs::Attributes::Key key(0, collectionNameHash);
+    Env::Key_T<Dogs::Attributes::Key> keyAtt = { .m_KeyInContract = key };
+    keyAtt.m_Prefix.m_Cid = cid;
+
+    // loading attributes for collection
+    Dogs::Attributes attributes;
+
+    if (!loadAndDeserializeObject(attributes, keyAtt))
+    {
+        return On_error("Cann't read collections");
+    }
+
+    // checking if such attribute already exists
+    if (std::find(attributes.attributes.begin(), attributes.attributes.end(), attribute) == attributes.attributes.end())
+    {
+        return On_error("attributes_name doesn't exist");
+    }
+
+    // creating key for attributes
+    Utility::Hash256 attributeNameHash = Utility::get_hash(collectionName.c_str(), collectionName.size());
+    Dogs::ImagesInfos::Key key_(0, collectionNameHash, attributeNameHash);
+    Env::Key_T<Dogs::Attributes::Key> keyIm = { .m_KeyInContract = key_ };
+    keyIm.m_Prefix.m_Cid = cid;
+
+    // loading images for 
+    Dogs::ImagesInfos images;
+
+    if (!loadAndDeserializeObject(images, keyIm))
+    {
+        return On_error("Cann't read imageInfos");
+    }
+
+    Env::DocGroup root("");
+    Env::DocArray gr0("items");
+
+    for (auto im : images.images)
+    {
+        Env::DocGroup gr1("");
+        Env::DocAddText("id", im.hash.c_str());
+    }
+
+}
+
+void On_action_view_image_by_id(const ContractID& cid)
+{
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -436,6 +662,24 @@ BEAM_EXPORT void Method_0()
                     Env::DocAddText("cid", "ContractID");
                     Env::DocAddText("collection_name", "string");
                 }
+                {
+                    Env::DocGroup grMethod("add_picture");
+                    Env::DocAddText("cid", "ContractID");
+                    Env::DocAddText("collection_name", "string");
+                    Env::DocAddText("attribute_name", "string");
+                    Env::DocAddText("data", "blob");
+                }
+                {
+                    Env::DocGroup grMethod("get_all_pictures_ids");
+                    Env::DocAddText("cid", "ContractID");
+                    Env::DocAddText("collection_name", "string");
+                    Env::DocAddText("attribute_name", "string");
+                }
+                {
+                    Env::DocGroup grMethod("view_picture");
+                    Env::DocAddText("cid", "ContractID");
+                    Env::DocAddText("id", "string");
+                }
             }
         }
     }
@@ -463,7 +707,10 @@ BEAM_EXPORT void Method_1()
         {"add_collection", On_action_add_collection},
         {"view_collections", On_action_view_collections},
         {"add_attribute", On_action_add_attribute_to_collection},
-        {"view_attributes", On_action_view_attributes_by_collection}
+        {"view_attributes", On_action_view_attributes_by_collection},
+        {"add_picture", On_action_add_image_to_attribute},
+        {"get_all_pictures_ids", On_action_get_all_images_ids},
+        {"view_picture", On_action_view_image_by_id}
     };
 
     const std::vector<std::pair<const char*, Action_func_t>> VALID_MANAGER_ACTIONS = 

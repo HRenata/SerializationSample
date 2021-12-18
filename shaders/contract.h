@@ -68,12 +68,12 @@ namespace Dogs
 	{
 		struct Key : public Collections::Key
 		{
-			Utility::Hash256 attributeNameHash;
+			Utility::Hash256 collectionNameHash;
 
 			Key() = default;
 			Key(const int key, const Utility::Hash256& collectionName) : Collections::Key(key)
 			{
-				Env::Memcpy(&attributeNameHash, &collectionName, sizeof(attributeNameHash));
+				Env::Memcpy(&collectionNameHash, &collectionName, sizeof(collectionNameHash));
 			}
 		};
 
@@ -94,9 +94,15 @@ namespace Dogs
 
 	struct Image
 	{
+		uint32_t m_Size;
+		// followed by the data
+	};
+
+	struct ImageInfo
+	{
 		std::string hash;
 
-		bool operator==(const Image& other) const
+		bool operator==(const ImageInfo& other) const
 		{
 			return hash == other.hash;
 		}
@@ -108,7 +114,7 @@ namespace Dogs
 		}
 	};
 
-	struct Images
+	struct ImagesInfos
 	{
 		struct Key : public Attributes::Key
 		{
@@ -122,18 +128,19 @@ namespace Dogs
 			}
 		};
 
+		std::string collectionName;
 		std::string attributeName;
-		std::vector<Dogs::Attribute> attributes;
+		std::vector<Dogs::ImageInfo> images;
 
-		bool operator==(const Images& other) const
+		bool operator==(const ImagesInfos& other) const
 		{
-			return attributeName == other.attributeName && attributes == other.attributes;
+			return attributeName == other.attributeName && images == other.images;
 		}
 
 		template<typename Ar>
 		void serialize(Ar& ar)
 		{
-			ar& attributeName& attributes;
+			ar& attributeName& images;
 		}
 	};
 	/////////////////////////////////////////////////////////////////////////////////////////
@@ -148,6 +155,14 @@ namespace Dogs
 		struct AddAttribute
 		{
 			static const uint32_t s_iMethod = 3;
+		};
+		struct AddImageInfo
+		{
+			static const uint32_t s_iMethod = 4;
+		};
+		struct AddImage
+		{
+			static const uint32_t s_iMethod = 5;
 		};
 	}
 #pragma pack (pop)
