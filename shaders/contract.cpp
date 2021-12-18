@@ -2,6 +2,8 @@
 #include "Shaders/Math.h"
 #include "contract.h"
 
+#include "pictures.h"
+
 BEAM_EXPORT void Ctor(void*) 
 {
 	// creating empty collections
@@ -60,4 +62,95 @@ BEAM_EXPORT void Method_3(Serialization::Buffer& paramsBuffer)
 	
 	// saving attributes
 	Env::SaveVar(&keyAtt, sizeof(keyAtt), &paramsBuffer, sizeof(Serialization::Buffer) + paramsBuffer.size, KeyTag::Internal);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+template<class T>
+const T& min(const T& a, const T& b)
+{
+	return (b < a) ? b : a;
+}
+BEAM_EXPORT void Method_4(const Gallery::Image& image)
+{
+	// picture to uint8_t*
+	auto pData = reinterpret_cast<const uint8_t*>(&image + 1);
+	uint32_t nData = image.m_Size;
+
+
+	// key for saving picture info
+	Gallery::Masterpiece::Key mk;
+	auto x = Utility::get_hash(pData, nData);
+	mk.m_ID = std::string(reinterpret_cast<char const*>(x.m_p), sizeof x.m_p);
+
+
+
+
+
+
+	// creating empty collections
+	std::vector<std::string> hashes;
+
+
+	// creating key
+	Dogs::Key1 key;
+	key.key = 1;
+
+	//deserialization
+	if (Env::LoadVar(&key, sizeof(key), nullptr, 0, KeyTag::Internal)) {
+		unsigned long long paramSize = 0;
+		Serialization::Buffer* buf = nullptr;
+		paramSize = Env::LoadVar(&key, sizeof(key), buf, paramSize, KeyTag::Internal);
+
+		std::vector<char> v(paramSize, '\0');
+		buf = reinterpret_cast<Serialization::Buffer*>(v.data());
+
+		Env::LoadVar(&key, sizeof(key), buf, paramSize, KeyTag::Internal);
+
+		yas::mem_istream ms(v.data() + sizeof(Serialization::Buffer), v.size() - sizeof(Serialization::Buffer));
+		yas::binary_iarchive<yas::mem_istream, Serialization::YAS_FLAGS> iar(ms);
+
+		iar& hashes;
+	}
+
+
+
+	hashes.push_back(mk.m_ID);
+
+	// serialization 
+	auto serializedBuffer = Serialization::serialize(hashes);
+
+	// saving serialized buffer
+	Env::SaveVar(&key, sizeof(key), serializedBuffer,
+		sizeof(Serialization::Buffer) + serializedBuffer->size, KeyTag::Internal);
+
+
+
+	//// info about picture
+	//Gallery::Masterpiece m;
+	//_POD_(m).SetZero();
+	//_POD_(m.m_pkOwner) = image.m_pkArtist;
+
+	// saveing picture info by key mk
+	//Env::SaveVar_T(mk, m);
+
+	////////////////////////////////////////////////////////////////////////////
+
+	// key for saving picture to log
+	Gallery::Events::Add::Key eak;
+	eak.m_ID = mk.m_ID;
+	_POD_(eak.m_pkArtist) = image.m_pkArtist;
+
+	uint32_t nMaxEventSize = 0x2000; // TODO: max event size is increased to 1MB from HF4
+
+	// saving picture to logs
+	while (true)
+	{
+		Env::EmitLog(&eak, sizeof(eak), pData, min(nData, nMaxEventSize), KeyTag::Internal);
+
+		if (nData <= nMaxEventSize)
+			break;
+
+		nData -= nMaxEventSize;
+		pData += nMaxEventSize;
+	}
 }
