@@ -25,7 +25,28 @@ namespace Dogs
 			ar& name;
 		}
 	};
-	using Collections = std::vector<Dogs::Collection>;
+	struct Collections
+	{
+		struct Key
+		{
+			int pubKey;
+			Key() = default;
+			Key(const int key) : pubKey(key) {}
+		};
+
+		std::vector<Dogs::Collection> collections;
+
+		bool operator==(const Collections& other) const
+		{
+			return collections == other.collections;
+		}
+
+		template<typename Ar>
+		void serialize(Ar& ar)
+		{
+			ar& collections;
+		}
+	};
 
 	struct Attribute
 	{
@@ -45,6 +66,17 @@ namespace Dogs
 
 	struct Attributes
 	{
+		struct Key : public Collections::Key
+		{
+			Utility::Hash256 name_hash;
+
+			Key() = default;
+			Key(const int key, const Utility::Hash256& name) : Collections::Key(key)
+			{
+				Env::Memcpy(&name_hash, &name, sizeof(name_hash));
+			}
+		};
+
 		std::string collectionName;
 		std::vector<Dogs::Attribute> attributes; 
 
@@ -63,21 +95,6 @@ namespace Dogs
 
 	/////////////////////////////////////////////////////////////////////////////////////////
 
-
-	struct Key
-	{
-		Utility::Hash256 name_hash;
-		Key(const Utility::Hash256& key)
-		{
-			Env::Memcpy(&name_hash, &key, sizeof(name_hash));
-		}
-	};
-
-	struct Key1
-	{
-		int key;
-	};
-	/////////////////////////////////////////////////////////////////////////////////////////
 
 	namespace Actions
 	{

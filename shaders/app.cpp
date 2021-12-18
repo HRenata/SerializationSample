@@ -41,17 +41,17 @@ void On_action_add_collection(const ContractID& cid)
     {
         return On_error("collection_name should be non-empty");
     }
-
     std::string collectionNameStr(collectionName, collectionNameSize);
+
     Dogs::Collection collection;
     collection.name = collectionNameStr;
 
     // creating key
-    Env::Key_T<Dogs::Key1> key;
+    Env::Key_T<Dogs::Collections::Key> key;
     _POD_(key.m_Prefix.m_Cid) = cid;
-    _POD_(key.m_KeyInContract.key) = 0;
+    _POD_(key.m_KeyInContract.pubKey) = 0;
 
-    uint32_t valueLen = 0, keyLen = sizeof(Dogs::Key1);
+    uint32_t valueLen = 0, keyLen = sizeof(Dogs::Collections::Key);
 
     // loading serialized buf of collections
     Dogs::Collections collections;
@@ -69,14 +69,14 @@ void On_action_add_collection(const ContractID& cid)
         collections = Serialization::deserialize<Dogs::Collections>(buf.get() + sizeof(Serialization::Buffer),
             valueLen - sizeof(Serialization::Buffer));
 
-        if (std::find(collections.begin(), collections.end(), collection) != collections.end())
+        if (std::find(collections.collections.begin(), collections.collections.end(), collection) != collections.collections.end())
         {
             return On_error("collection_name exists");
         }
     }
 
     // adding new collection
-    collections.push_back(collection);
+    collections.collections.push_back(collection);
 
     // serialization of collections
     auto serializedBuffer = Serialization::serialize(collections);
@@ -90,12 +90,12 @@ void On_action_add_collection(const ContractID& cid)
 void On_action_view_collections(const ContractID& cid)
 {
     // creating key
-    Env::Key_T<Dogs::Key1> key;
+    Env::Key_T<Dogs::Collections::Key> key;
     _POD_(key.m_Prefix.m_Cid) = cid;
-    _POD_(key.m_KeyInContract.key) = 0;
+    _POD_(key.m_KeyInContract.pubKey) = 0;
 
     // loading serialized buf of collections
-    uint32_t valueLen = 0, keyLen = sizeof(Dogs::Key1);
+    uint32_t valueLen = 0, keyLen = sizeof(Dogs::Collections::Key);
 
     Env::VarReader reader(key, key);
     if (!reader.MoveNext(&key, keyLen, nullptr, valueLen, 0))
@@ -116,21 +116,43 @@ void On_action_view_collections(const ContractID& cid)
 
     // printing all collecitons' name
     Env::DocAddGroup("collections");
-    for (auto coll : collections)
+    for (auto coll : collections.collections)
     {
         Env::DocAddText("", coll.name.c_str());
     }
 }
 
 void On_action_add_attribute_to_collection(const ContractID& cid)
-{
+{    
+    // loading name of collection, that will get new attribute, from function parameters
+    char collectionName[0x20];
+    uint32_t collectionNameSize = 0;
+    collectionNameSize = Env::DocGetText("collection_name", collectionName, sizeof(collectionName));
+    if (collectionNameSize < 2)
+    {
+        return On_error("collection_name should be non-empty");
+    }
+    std::string collectionNameStr(collectionName, collectionNameSize);
+
+    // loading name of attribute for collection  from function parameters
+    char attributeName[0x20];
+    uint32_t attributeNameSize = 0;
+    attributeNameSize = Env::DocGetText("attribute_name", attributeName, sizeof(attributeName));
+    if (attributeNameSize < 2)
+    {
+        return On_error("attribute_name should be non-empty");
+    }
+    std::string attributeNameStr(attributeName, attributeNameSize);
+
+
+
     // creating key for collections
-    Env::Key_T<Dogs::Key1> key;
+    Env::Key_T<Dogs::Collections::Key> key;
     _POD_(key.m_Prefix.m_Cid) = cid;
-    _POD_(key.m_KeyInContract.key) = 0;
+    _POD_(key.m_KeyInContract.pubKey) = 0;
 
     // loading serialized buf of collections
-    uint32_t valueLen = 0, keyLen = sizeof(Dogs::Key1);
+    uint32_t valueLen = 0, keyLen = sizeof(Dogs::Collections::Key);
 
     Env::VarReader reader(key, key);
     if (!reader.MoveNext(&key, keyLen, nullptr, valueLen, 0))
@@ -148,46 +170,28 @@ void On_action_add_attribute_to_collection(const ContractID& cid)
     Dogs::Collections collections = Serialization::deserialize<Dogs::Collections>(buf.get() + sizeof(Serialization::Buffer),
         valueLen - sizeof(Serialization::Buffer));
 
-    // loading name of collection, that will get new attribute, from function parameters
-    char collectionName[0x20];
-    uint32_t collectionNameSize = 0;
-    collectionNameSize = Env::DocGetText("collection_name", collectionName, sizeof(collectionName));
-    if (collectionNameSize < 2)
-    {
-        return On_error("collection_name should be non-empty");
-    }
-
-    std::string collectionNameStr(collectionName, collectionNameSize);
+    // creation collection
     Dogs::Collection collection;
     collection.name = collectionNameStr;
 
     // checking if such collection already exists
-    if (std::find(collections.begin(), collections.end(), collection) == collections.end())
+    if (std::find(collections.collections.begin(), collections.collections.end(), collection) == collections.collections.end())
     {
         return On_error("collection_name doesn't exist");
     }
 
-    // loading name of attribute for collection  from function parameters
-    char attributeName[0x20];
-    uint32_t attributeNameSize = 0;
-    attributeNameSize = Env::DocGetText("attribute_name", attributeName, sizeof(attributeName));
-    if (attributeNameSize < 2)
-    {
-        return On_error("attribute_name should be non-empty");
-    }
-
-    std::string attributeNameStr(attributeName, attributeNameSize);
+    // creating attribute
     Dogs::Attribute attribute;
     attribute.name = attributeNameStr;
 
     // creating key for attributes
     Utility::Hash256 name_hash = Utility::get_hash(collectionNameStr.c_str(), collectionNameStr.size());
-    Dogs::Key key_(name_hash);
-    Env::Key_T<Dogs::Key> keyAtt = { .m_KeyInContract = key_ };
+    Dogs::Attributes::Key key_(0, name_hash);
+    Env::Key_T<Dogs::Attributes::Key> keyAtt = { .m_KeyInContract = key_ };
     keyAtt.m_Prefix.m_Cid = cid;
 
     valueLen = 0;
-    keyLen = sizeof(Dogs::Key);
+    keyLen = sizeof(Dogs::Attributes::Key);
 
     Dogs::Attributes attributes;
 
@@ -239,12 +243,12 @@ void On_action_view_attributes_by_collection(const ContractID& cid)
     // creating key for loading attributes
     std::string collectionNameStr(collectionName, collectionNameSize);
     Utility::Hash256 name_hash = Utility::get_hash(collectionNameStr.c_str(), collectionNameStr.size());
-    Dogs::Key key_(name_hash);
-    Env::Key_T<Dogs::Key> keyAtt = { .m_KeyInContract = key_ };
+    Dogs::Attributes::Key key_(0, name_hash);
+    Env::Key_T<Dogs::Attributes::Key> keyAtt = { .m_KeyInContract = key_ };
     keyAtt.m_Prefix.m_Cid = cid;
 
     // loading vector of attributes for collection
-    uint32_t valueLen = 0, keyLen = sizeof(Dogs::Key);
+    uint32_t valueLen = 0, keyLen = sizeof(Dogs::Attributes::Key);
 
     Env::VarReader readerAtt(keyAtt, keyAtt);
     if (!readerAtt.MoveNext(&keyAtt, keyLen, nullptr, valueLen, 0))
@@ -357,12 +361,12 @@ void On_action_load_attribute_picture(const ContractID& cid)
 void On_action_load_all_pictures_id(const ContractID& cid)
 {
     // creating key for collections
-    Env::Key_T<Dogs::Key1> key;
+    Env::Key_T<Dogs::Collections::Key> key;
     _POD_(key.m_Prefix.m_Cid) = cid;
-    _POD_(key.m_KeyInContract.key) = 1;
+    _POD_(key.m_KeyInContract.pubKey) = 1;
 
     // loading serialized buf of collections
-    uint32_t valueLen = 0, keyLen = sizeof(Dogs::Key1);
+    uint32_t valueLen = 0, keyLen = sizeof(Dogs::Collections::Key);
 
     Env::VarReader reader(key, key);
     if (!reader.MoveNext(&key, keyLen, nullptr, valueLen, 0))

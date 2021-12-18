@@ -13,8 +13,7 @@ BEAM_EXPORT void Ctor(void*)
 	auto serializedBuffer = Serialization::serialize(collections);
 
 	// creating key
-	Dogs::Key1 key;
-	key.key = 0;
+	Dogs::Collections::Key key (0);
 
 	// saving serialized buffer
 	Env::SaveVar(&key, sizeof(key), serializedBuffer,
@@ -26,8 +25,7 @@ BEAM_EXPORT void Dtor(void*) {}
 BEAM_EXPORT void Method_2(Serialization::Buffer& paramsBuffer)
 {
 	// creating key for saving collections
-	Dogs::Key1 key;
-	key.key = 0;
+	Dogs::Collections::Key key (0);
 	
 	// saving collections
 	Env::SaveVar(&key, sizeof(key), &paramsBuffer, sizeof(Serialization::Buffer) + paramsBuffer.size, KeyTag::Internal);
@@ -37,14 +35,14 @@ BEAM_EXPORT void Method_2(Serialization::Buffer& paramsBuffer)
 
 	// creating of attributes with empty vector for last collection
 	Dogs::Attributes attributes;
-	attributes.collectionName = collections[collections.size() - 1].name;
+	attributes.collectionName = collections.collections[collections.collections.size() - 1].name;
 
 	// serialization of attributes for last collection
 	auto serializedBuffer = Serialization::serialize(attributes);
 
 	//creating key for saving attributes
 	Utility::Hash256 nameHash = Utility::get_hash(attributes.collectionName.c_str(), attributes.collectionName.size());
-	Dogs::Key keyAtt(nameHash);
+	Dogs::Attributes::Key keyAtt(0, nameHash);
 
 	// saving attributes
 	Env::SaveVar(&keyAtt, sizeof(keyAtt), serializedBuffer,
@@ -58,7 +56,7 @@ BEAM_EXPORT void Method_3(Serialization::Buffer& paramsBuffer)
 
 	//creating key
 	Utility::Hash256 nameHash = Utility::get_hash(attributes.collectionName.c_str(), attributes.collectionName.size());
-	Dogs::Key keyAtt(nameHash);
+	Dogs::Attributes::Key keyAtt(0, nameHash);
 	
 	// saving attributes
 	Env::SaveVar(&keyAtt, sizeof(keyAtt), &paramsBuffer, sizeof(Serialization::Buffer) + paramsBuffer.size, KeyTag::Internal);
@@ -92,8 +90,7 @@ BEAM_EXPORT void Method_4(const Gallery::Image& image)
 
 
 	// creating key
-	Dogs::Key1 key;
-	key.key = 1;
+	Dogs::Collections::Key key (1);
 
 	//deserialization
 	if (Env::LoadVar(&key, sizeof(key), nullptr, 0, KeyTag::Internal)) {
