@@ -122,18 +122,18 @@ namespace Dogs
 			}
 		};
 
-		std::string collectionName;
+		std::string attributeName;
 		std::vector<Dogs::Attribute> attributes;
 
-		bool operator==(const Attributes& other) const
+		bool operator==(const Images& other) const
 		{
-			return collectionName == other.collectionName && attributes == other.attributes;
+			return attributeName == other.attributeName && attributes == other.attributes;
 		}
 
 		template<typename Ar>
 		void serialize(Ar& ar)
 		{
-			ar& collectionName& attributes;
+			ar& attributeName& attributes;
 		}
 	};
 	/////////////////////////////////////////////////////////////////////////////////////////

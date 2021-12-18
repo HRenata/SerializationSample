@@ -54,12 +54,28 @@ BEAM_EXPORT void Method_3(Serialization::Buffer& paramsBuffer)
 	// deserialization of attributes
 	Dogs::Attributes attributes = Serialization::deserialize<Dogs::Attributes>(paramsBuffer.data, paramsBuffer.size);
 
-	//creating key
-	Utility::Hash256 nameHash = Utility::get_hash(attributes.collectionName.c_str(), attributes.collectionName.size());
-	Dogs::Attributes::Key keyAtt(0, nameHash);
+	//creating key for saving attributes
+	Utility::Hash256 attributeNameHash = Utility::get_hash(attributes.collectionName.c_str(), attributes.collectionName.size());
+	Dogs::Attributes::Key keyAtt(0, attributeNameHash);
 	
 	// saving attributes
 	Env::SaveVar(&keyAtt, sizeof(keyAtt), &paramsBuffer, sizeof(Serialization::Buffer) + paramsBuffer.size, KeyTag::Internal);
+
+
+	// creating of attributes with empty vector for last collection
+	Dogs::Images images;
+	images.attributeName = attributes.attributes[attributes.attributes.size() - 1].name;
+
+	// serialization of attributes for last collection
+	auto serializedBuffer = Serialization::serialize(images);
+
+	//creating key for saving images
+	Utility::Hash256 imageNameHash = Utility::get_hash(images.attributeName.c_str(), images.attributeName.size());
+	Dogs::Attributes::Key keyIm(0, imageNameHash);
+
+	// saving attributes
+	Env::SaveVar(&keyIm, sizeof(keyIm), serializedBuffer,
+		sizeof(Serialization::Buffer) + serializedBuffer->size, KeyTag::Internal);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
