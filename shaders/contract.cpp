@@ -64,6 +64,7 @@ BEAM_EXPORT void Method_3(Serialization::Buffer& paramsBuffer)
 
 	// creating of attributes with empty vector of images for last collection
 	Dogs::ImagesInfos images;
+	images.collectionName = attributes.collectionName;
 	images.attributeName = attributes.attributes[attributes.attributes.size() - 1].name;
 
 	// serialization of attributes for last collection

@@ -258,7 +258,7 @@ void On_action_add_image_to_attribute(const ContractID& cid)
 
     if (!loadAndDeserializeObject(attributes, keyAtt))
     {
-        return On_error("Cann't read collections");
+        return On_error("Cann't read attributes");
     }
 
     // checking if such attribute already exists
@@ -287,10 +287,10 @@ void On_action_add_image_to_attribute(const ContractID& cid)
         return;
     }
 
-    // creating key for attributes
-    Utility::Hash256 attributeNameHash = Utility::get_hash(collectionName.c_str(), collectionName.size());
+    // creating key for image info
+    Utility::Hash256 attributeNameHash = Utility::get_hash(attributeName.c_str(), attributeName.size());
     Dogs::ImagesInfos::Key key_(0, collectionNameHash, attributeNameHash);
-    Env::Key_T<Dogs::Attributes::Key> keyIm = { .m_KeyInContract = key_ };
+    Env::Key_T<Dogs::ImagesInfos::Key> keyIm = { .m_KeyInContract = key_ };
     keyIm.m_Prefix.m_Cid = cid;
 
     // loading images for 
@@ -309,7 +309,7 @@ void On_action_add_image_to_attribute(const ContractID& cid)
 
     // creating image info
     Dogs::ImageInfo imageInfo;
-    imageInfo.hash = std::string(reinterpret_cast<char const*>(imageHash.m_p), sizeof imageHash.m_p);
+    imageInfo.hash = std::string(reinterpret_cast<char const*>(imageHash.m_p), sizeof(imageHash.m_p));
 
     // checking if such image already exists
     if (std::find(images.images.begin(), images.images.end(), imageInfo) != images.images.end())
@@ -319,7 +319,7 @@ void On_action_add_image_to_attribute(const ContractID& cid)
 
     images.images.push_back(imageInfo);
 
-    // serialization of attributes
+    // serialization of image info
     auto serializedBuffer = Serialization::serialize(images);
 
     // transaction for saving image info
@@ -390,7 +390,7 @@ void On_action_get_all_images_ids(const ContractID& cid)
 
     if (!loadAndDeserializeObject(attributes, keyAtt))
     {
-        return On_error("Cann't read collections");
+        return On_error("Cann't read attributes");
     }
 
     // checking if such attribute already exists
@@ -399,10 +399,10 @@ void On_action_get_all_images_ids(const ContractID& cid)
         return On_error("attributes_name doesn't exist");
     }
 
-    // creating key for attributes
-    Utility::Hash256 attributeNameHash = Utility::get_hash(collectionName.c_str(), collectionName.size());
+    // creating key for images
+    Utility::Hash256 attributeNameHash = Utility::get_hash(attributeName.c_str(), attributeName.size());
     Dogs::ImagesInfos::Key key_(0, collectionNameHash, attributeNameHash);
-    Env::Key_T<Dogs::Attributes::Key> keyIm = { .m_KeyInContract = key_ };
+    Env::Key_T<Dogs::ImagesInfos::Key> keyIm = { .m_KeyInContract = key_ };
     keyIm.m_Prefix.m_Cid = cid;
 
     // loading images for 

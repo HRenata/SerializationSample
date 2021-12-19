@@ -134,13 +134,14 @@ namespace Dogs
 
 		bool operator==(const ImagesInfos& other) const
 		{
-			return attributeName == other.attributeName && images == other.images;
+			return collectionName == other.collectionName && attributeName == other.attributeName 
+				&& images == other.images;
 		}
 
 		template<typename Ar>
 		void serialize(Ar& ar)
 		{
-			ar& attributeName& images;
+			ar& collectionName& attributeName& images;
 		}
 	};
 	/////////////////////////////////////////////////////////////////////////////////////////
