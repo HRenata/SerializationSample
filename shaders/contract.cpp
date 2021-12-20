@@ -113,7 +113,10 @@ BEAM_EXPORT void Method_6(const Gallery::Image& image)
 	// key for saving picture info
 	Gallery::Masterpiece::Key mk;
 	auto x = Utility::get_hash(pData, nData);
-	mk.m_ID = std::string(reinterpret_cast<char const*>(x.m_p), sizeof x.m_p);
+	
+	Env::Memcpy(&mk.m_ID,&x,sizeof(x));
+	//mk.m_ID = Utility::EncodeBase64(x.m_p, sizeof(x.m_p));
+	//mk.m_ID = std::string(reinterpret_cast<char const*>(x.m_p), sizeof x.m_p);
 
 
 
@@ -121,7 +124,7 @@ BEAM_EXPORT void Method_6(const Gallery::Image& image)
 
 
 	// creating empty collections
-	std::vector<std::string> hashes;
+	std::vector<Utility::Hash256> hashes;
 
 
 	// creating key
@@ -169,7 +172,8 @@ BEAM_EXPORT void Method_6(const Gallery::Image& image)
 
 	// key for saving picture to log
 	Gallery::Events::Add::Key eak;
-	eak.m_ID = mk.m_ID;
+	Env::Memcpy(&eak.m_ID, &x, sizeof(mk.m_ID));
+	//eak.m_ID = mk.m_ID;
 	_POD_(eak.m_pkArtist) = image.m_pkArtist;
 
 	uint32_t nMaxEventSize = 0x2000; // TODO: max event size is increased to 1MB from HF4

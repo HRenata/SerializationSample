@@ -9,7 +9,8 @@ namespace Gallery
     struct Masterpiece
     {
         struct Key {
-            std::string m_ID;
+            Utility::Hash256 m_ID;
+            //std::string m_ID;
         };
 
         PubKey m_pkOwner;
@@ -28,7 +29,8 @@ namespace Gallery
         struct Add {
             struct Key {
                 uint8_t m_Prefix = 0;
-                std::string m_ID;
+                Utility::Hash256 m_ID;
+                //std::string m_ID;
                 PubKey m_pkArtist;
             };
             // data is the exhibit itself
@@ -39,6 +41,7 @@ namespace Gallery
     {
         PubKey m_pkArtist;
         uint32_t m_Size;
+        Utility::Hash256 m_ID;
         // followed by the data
     };
 

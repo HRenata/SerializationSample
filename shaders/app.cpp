@@ -467,22 +467,28 @@ void On_action_save_attribute_picture(const ContractID& cid)
 
 void On_action_load_attribute_picture(const ContractID& cid)
 {
-    char id[0x20];
-    uint32_t collectionNameSize = 0;
-    collectionNameSize = Env::DocGetText("id", id, sizeof(id));
-    if (collectionNameSize < 2)
-    {
-        return On_error("collection_name should be non-empty");
-    }
-    Env::DocAddText("", id);
-    std::string idStr(id, collectionNameSize);
+
+    Utility::Hash256 id;
+    Env::DocGet("id", id);
+
+
+    //char id[0x20];
+    //uint32_t collectionNameSize = 0;
+    //collectionNameSize = Env::DocGetText("id", id, sizeof(id));
+    //if (collectionNameSize < 2)
+    //{
+    //    return On_error("collection_name should be non-empty");
+    //}
+    //std::string idStr(id, collectionNameSize);
 
 
     Env::Key_T<Gallery::Events::Add::Key> k0, k1;
     _POD_(k0.m_Prefix.m_Cid) = cid;
     _POD_(k1.m_Prefix.m_Cid) = cid;
-    k0.m_KeyInContract.m_ID = idStr;
-    k1.m_KeyInContract.m_ID = idStr;
+    Env::Memcpy(&k0.m_KeyInContract.m_ID, &id, sizeof(id));
+    Env::Memcpy(&k1.m_KeyInContract.m_ID, &id, sizeof(id));
+    //k0.m_KeyInContract.m_ID = idStr;
+    //k1.m_KeyInContract.m_ID = idStr;
     _POD_(k0.m_KeyInContract.m_pkArtist).SetZero();
     _POD_(k1.m_KeyInContract.m_pkArtist).SetObject(0xff);
 
@@ -536,7 +542,7 @@ void On_action_load_all_pictures_id(const ContractID& cid)
     }
 
     // deserialization of collections
-    std::vector<std::string> hashes = Serialization::deserialize<std::vector<std::string>>(buf.get() + sizeof(Serialization::Buffer),
+    std::vector<Utility::Hash256> hashes = Serialization::deserialize<std::vector<Utility::Hash256>>(buf.get() + sizeof(Serialization::Buffer),
         valueLen - sizeof(Serialization::Buffer));
 
 
@@ -546,7 +552,7 @@ void On_action_load_all_pictures_id(const ContractID& cid)
     for (auto hash : hashes )
     {
         Env::DocGroup gr1("");
-        Env::DocAddText("id", hash.c_str());
+        Env::DocAddBlob_T("id", hash);
     }
 }
 
