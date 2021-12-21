@@ -545,7 +545,6 @@ void On_action_load_all_pictures_id(const ContractID& cid)
     std::vector<Utility::Hash256> hashes = Serialization::deserialize<std::vector<Utility::Hash256>>(buf.get() + sizeof(Serialization::Buffer),
         valueLen - sizeof(Serialization::Buffer));
 
-
     Env::DocGroup gr2("");
     Env::DocArray gr0("items");
 

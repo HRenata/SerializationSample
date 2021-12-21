@@ -115,11 +115,6 @@ BEAM_EXPORT void Method_6(const Gallery::Image& image)
 	auto x = Utility::get_hash(pData, nData);
 	
 	Env::Memcpy(&mk.m_ID,&x,sizeof(x));
-	//mk.m_ID = Utility::EncodeBase64(x.m_p, sizeof(x.m_p));
-	//mk.m_ID = std::string(reinterpret_cast<char const*>(x.m_p), sizeof x.m_p);
-
-
-
 
 
 
@@ -159,14 +154,6 @@ BEAM_EXPORT void Method_6(const Gallery::Image& image)
 		sizeof(Serialization::Buffer) + serializedBuffer->size, KeyTag::Internal);
 
 
-
-	//// info about picture
-	//Gallery::Masterpiece m;
-	//_POD_(m).SetZero();
-	//_POD_(m.m_pkOwner) = image.m_pkArtist;
-
-	// saveing picture info by key mk
-	//Env::SaveVar_T(mk, m);
 
 	////////////////////////////////////////////////////////////////////////////
 
